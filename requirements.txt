@@ -1,0 +1,6 @@
+numpy
+matplotlib
+uproot       # leitura de ficheiros ROOT
+awkward      # arrays para dados ROOT
+pandas
+jupyter
