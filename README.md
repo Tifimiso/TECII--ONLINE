@@ -1,2 +1,48 @@
-# TECII--ONLINE
-REPOSITORIO2025/2026
+# TECII — ONLINE | Trabalho de Grupo 2024/2025
+
+Repositório do trabalho de grupo da unidade curricular **Tópicos em Engenharia Computacional II (42186)**, Departamento de Física, Universidade de Aveiro.
+
+## Descrição
+
+Análise de dados de simulação Geant4 do detector **AMBER Target**.
+O objetivo é processar os ficheiros de saída da simulação (formato ROOT) e produzir histogramas e distribuições das grandezas físicas pedidas no guia do trabalho prático.
+
+## Membros do Grupo
+
+| Nome   | Branch Git |
+|--------|------------|
+| Diana  | `Diana`    |
+| Tiago  | `Tiago`    |
+
+## Estrutura do Repositório
+
+Ver [STRUCTURE.md](STRUCTURE.md) para a descrição completa de todas as pastas e ficheiros.
+
+## Regras de Trabalho em Git
+
+> **Cada membro do grupo deve trabalhar na sua própria branch.**
+> Ninguém deve fazer commits diretamente na branch `main`.
+> As contribuições são integradas em `main` via Pull Request, depois de revisão.
+
+## Dados de Simulação
+
+Os ficheiros de dados (`.root`) **não estão no repositório git** — são demasiado grandes.
+Ver as instruções em [`data/README.md`](data/README.md) para obter os ficheiros e colocá-los na pasta correta.
+
+## Instalação de Dependências
+
+```bash
+pip install -r requirements.txt
+```
+
+## Análises Implementadas
+
+As análises seguem o guia do trabalho prático. Os scripts estão em `analysis/`:
+
+| Script | Análise |
+|--------|---------|
+| `energy_deposition.py` | Deposição de energia por detetor e por partícula |
+| `hit_distribution.py` | Distribuição de hits em X e Y por detetor e carga |
+| `hadronic_vertex.py` | Vértices hadrónicos primários e secundários em Z |
+| `temporal_distribution.py` | Distribuição temporal dos hits por detetor |
+| `momentum_distribution.py` | Momento em Z para muões, piões e piões primários/secundários |
