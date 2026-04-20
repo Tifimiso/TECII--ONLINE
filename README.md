@@ -24,6 +24,46 @@ Ver [STRUCTURE.md](STRUCTURE.md) para a descrição completa de todas as pastas 
 > Ninguém deve fazer commits diretamente na branch `main`.
 > As contribuições são integradas em `main` via Pull Request, depois de revisão.
 
+### Convenção de Commits
+
+Os commits devem seguir o formato abaixo para que o histórico seja claro e profissional.
+O professor avalia a quantidade **e qualidade** dos commits — mensagens vagas como
+`"update"` ou `"fix"` não contam.
+
+**Formato:**
+```
+<tipo>: <descrição curta e clara do que foi feito>
+
+<explicação opcional: porquê, o que mudou, decisões tomadas>
+```
+
+**Tipos disponíveis:**
+
+| Tipo | Quando usar |
+|------|-------------|
+| `feat` | Adicionaste uma nova funcionalidade ou análise |
+| `fix` | Corrigiste um erro num script ou ficheiro |
+| `refactor` | Reorganizaste código sem mudar o comportamento |
+| `docs` | Alteraste documentação (README, comentários, relatório) |
+| `chore` | Tarefas de manutenção (gitignore, dependências, estrutura) |
+
+**Exemplo de um bom commit:**
+```
+feat: implementar histograma de deposição de energia por detetor
+
+Adicionada a função plot_energy_deposition_per_detector() em
+analysis/energy_deposition.py. Lê os dados do ficheiro ROOT com
+uproot, filtra por detetor e gera um histograma por cada um.
+Os plots são guardados em plots/energy/.
+```
+
+**Exemplo de um commit fraco (a evitar):**
+```
+update analysis   ❌
+fix stuff         ❌
+trabalho          ❌
+```
+
 ## Dados de Simulação
 
 Os ficheiros de dados (`.root`) **não estão no repositório git** — são demasiado grandes.
