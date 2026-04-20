@@ -13,6 +13,8 @@ O objetivo é processar os ficheiros de saída da simulação (formato ROOT) e p
 |--------|------------|
 | Diana  | `Diana`    |
 | Tiago  | `Tiago`    |
+| _(a preencher)_ | _(a preencher)_ |
+| _(a preencher)_ | _(a preencher)_ |
 
 ## Estrutura do Repositório
 
