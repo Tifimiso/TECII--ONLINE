@@ -28,7 +28,7 @@ Ver [STRUCTURE.md](STRUCTURE.md) para a descrição completa de todas as pastas 
 
 ### Convenção de Commits
 
-Os commits devem seguir o formato abaixo para que o histórico seja claro e profissional.
+Os commits devem seguir o formato abaixo para que o histórico seja claro.
 O professor avalia a quantidade **e qualidade** dos commits — mensagens vagas como
 `"update"` ou `"fix"` não contam.
 
