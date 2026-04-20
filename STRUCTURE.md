@@ -27,9 +27,6 @@ projeto/
 │   ├── report.tex               # Fonte LaTeX do relatório
 │   └── report.pdf               # Relatório compilado (gerado a partir do .tex — não versionado)
 │
-├── notebooks/                   # Scripts e Notebooks para exploração e prototipagem
-│   └── firstTeste.py            # Exploração inicial dos dados com PyROOT (Tiago)
-│
 ├── requirements.txt             # Dependências Python (numpy, matplotlib, uproot, etc.)
 ├── STRUCTURE.md                 # Este ficheiro — descrição da estrutura do repositório
 └── README.md                    # Descrição geral do projeto e instruções de uso
@@ -61,10 +58,6 @@ Estes ficheiros **não são versionados** (são gerados pelos scripts, não deve
 ### `report/`
 Relatório final em LaTeX. O ficheiro `report.pdf` é gerado ao compilar o `report.tex`
 e **não é versionado**.
-
-### `notebooks/`
-Scripts e Notebooks para exploração inicial dos dados e prototipagem de análises.
-Não fazem parte da análise formal — são auxiliares de desenvolvimento.
 
 ### `requirements.txt`
 Lista de dependências Python necessárias para correr os scripts de análise.
