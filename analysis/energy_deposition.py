@@ -4,11 +4,15 @@ energy_deposition.py
 Analise da deposicao de energia nos detetores.
 
 Analises incluidas:
-    1. Histograma de deposicao de energia em cada detetor.
-    2. Histograma de deposicao de energia por tipo de particula
-       (muoes, pioes e outras) em cada detetor.
-    3. Histograma da perda de energia total nos detetores
-       para cada tipo de particula.
+    1. Composicao do feixe — abundancia relativa de cada especie de particula.
+    2. Histograma de deposicao de energia em cada detetor.
+    3. Histograma de deposicao de energia por tipo de particula em cada detetor.
+    4. Histograma da perda de energia total nos detetores por tipo de particula.
+    5. Fit de distribuicao de Landau a pioes e protoes por detetor.
+    6. MPV e sigma do fit Landau vs numero de detetor (com ajuste linear).
+    7. Fit de Landau para kaoes — comparacao da serie piao/kaon/protao.
+    8. MPV vs massa da particula — confirmacao da formula de Bethe-Bloch.
+    9. Sobreposicao dos 4 detetores para verificacao de consistencia.
 """
 
 import os
@@ -37,6 +41,84 @@ def carregar_chain(tree_name):
     for f in DATA_FILES:
         chain.Add(f)
     return chain
+
+
+def plot_beam_composition():
+    """
+    Composicao do feixe — numero de tracks por especie de particula.
+    Identifica as especies dominantes nos dados e a sua abundancia relativa.
+    Essencial para contextualizar todas as analises subsequentes.
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    dados = carregar_chain("tracksData")
+
+    # especies identificadas nos dados por PDG code
+    especies = [
+        ("e^{#pm}",    "(particlePDG==11  || particlePDG==-11)",  ROOT.kOrange+1),
+        ("#gamma",     "particlePDG==22",                          ROOT.kGreen+2),
+        ("#pi^{#pm}",  "(particlePDG==211 || particlePDG==-211)",  ROOT.kRed+1),
+        ("p",          "particlePDG==2212",                        ROOT.kMagenta+1),
+        ("K^{#pm}",    "(particlePDG==321 || particlePDG==-321)",  ROOT.kCyan+1),
+        ("#mu^{#pm}",  "(particlePDG==13  || particlePDG==-13)",   ROOT.kBlue+1),
+    ]
+
+    nomes  = []
+    counts = []
+    cores  = []
+
+    for nome, selecao, cor in especies:
+        h = ROOT.TH1D("hCount_{}".format(nome), "", 1, 0, 1)
+        dados.Draw("0.5>>hCount_{}".format(nome), selecao, "goff")
+        nomes.append(nome)
+        counts.append(h.GetEntries())
+        cores.append(cor)
+
+    canvas = ROOT.TCanvas("c_beam", "", 900, 600)
+    canvas.SetLogy()
+    canvas.SetGrid()
+    canvas.SetBottomMargin(0.12)
+
+    n = len(nomes)
+    hbar = ROOT.TH1D("hBeam",
+                     "Composicao do feixe (4 runs);Especie de particula;Numero de tracks",
+                     n, 0, n)
+
+    for i, (nome, count, cor) in enumerate(zip(nomes, counts, cores)):
+        hbar.GetXaxis().SetBinLabel(i + 1, nome)
+        hbar.SetBinContent(i + 1, count)
+
+    hbar.SetFillColor(ROOT.kBlue - 9)
+    hbar.SetLineColor(ROOT.kBlue + 1)
+    hbar.GetXaxis().SetLabelSize(0.06)
+    hbar.GetYaxis().SetTitleOffset(1.3)
+
+    ROOT.gStyle.SetOptStat(0)
+    hbar.Draw("HIST")
+
+    # adicionar percentagens abaixo do topo de cada barra
+    total = sum(counts)
+    labels = []  # manter referencias para evitar garbage collection
+    for i, count in enumerate(counts):
+        pct = 100.0 * count / total
+        # posicionar o texto a 20% da altura da barra (em log scale)
+        ypos = count * 0.3
+        label = ROOT.TLatex(i + 0.5, ypos, "{:.1f}%".format(pct))
+        label.SetTextSize(0.038)
+        label.SetTextAlign(21)
+        label.SetTextColor(ROOT.kBlack)
+        label.Draw()
+        labels.append(label)
+
+    canvas.SaveAs("{}/composicao_feixe.png".format(OUTPUT_DIR))
+    canvas.Close()
+
+    ROOT.gStyle.SetOptStat(1)
+    print("[OK] plot_beam_composition")
+    print("  Total de tracks: {:,}".format(int(total)))
+    for nome, count in zip(nomes, counts):
+        print("  {:12s}: {:>9,.0f}  ({:.1f}%)".format(
+            nome, count, 100.0 * count / total))
 
 
 def plot_energy_deposition_per_detector():
@@ -476,6 +558,66 @@ def plot_landau_fit_protons():
     print("[OK] plot_landau_fit_protons")
 
 
+def plot_landau_fit_kaons():
+    """
+    Ajuste de uma distribuicao de Landau a deposicao de energia de kaoes em cada detetor.
+    Filtros: momentum_GeV > 0.5 e EdepDet > 10 keV.
+    Kaoes (massa 494 MeV/c^2) sao intermendios entre pioes (140 MeV/c^2) e
+    protoes (938 MeV/c^2) — o MPV deve ser intermedio, confirmando Bethe-Bloch.
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    KEV_TO_MEV = 1e-3
+
+    dados = carregar_chain("tracksData")
+
+    nBins  = 300
+    minBin = 0.0
+    maxBin = 12.0  # MeV — kaoes depositam mais que pioes, menos que protoes
+
+    ROOT.gStyle.SetOptStat(0)
+    ROOT.gStyle.SetOptFit(1)
+
+    for i in range(4):
+        branchName = "EdepDet{}_keV".format(i)
+        exprMeV    = "{}*{}".format(branchName, KEV_TO_MEV)
+        selecao    = "(particlePDG==321 || particlePDG==-321) && {}>10 && momentum_GeV>0.5".format(branchName)
+
+        canvas    = ROOT.TCanvas("c_landau_k_{}".format(i), "", 800, 600)
+        histoName = "hLandauK_det{}".format(i)
+
+        histo = ROOT.TH1D(histoName,
+                          "Deposicao de energia de kaoes - Detetor {} (fit Landau);Energia (MeV);Contagens".format(i),
+                          nBins, minBin, maxBin)
+
+        dados.Draw("{}>>{}".format(exprMeV, histoName), selecao, "goff")
+
+        histo.SetLineColor(ROOT.kCyan + 1)
+        histo.SetFillColor(ROOT.kCyan - 9)
+        histo.SetLineWidth(1)
+
+        landauFit = ROOT.TF1("landauFitK_{}".format(i), "landau", 0.5, 8.0)
+        landauFit.SetLineColor(ROOT.kBlack)
+        landauFit.SetLineWidth(2)
+        histo.Fit(landauFit, "RQ")
+
+        mpv   = landauFit.GetParameter(1)
+        sigma = landauFit.GetParameter(2)
+
+        histo.Draw("HIST")
+        landauFit.Draw("SAME")
+
+        canvas.SaveAs("{}/landau_kaoes_detector{}.png".format(OUTPUT_DIR, i))
+        canvas.Close()
+
+        print("  Detetor {}: MPV = {:.3f} +/- {:.3f} MeV | Sigma = {:.3f} +/- {:.3f} MeV".format(
+            i, mpv, landauFit.GetParError(1), sigma, landauFit.GetParError(2)))
+
+    ROOT.gStyle.SetOptStat(1)
+    ROOT.gStyle.SetOptFit(0)
+    print("[OK] plot_landau_fit_kaons")
+
+
 def plot_mpv_pioes_vs_protoes():
     """
     Comparacao do MPV do fit Landau entre pioes e protoes em funcao do detetor.
@@ -626,11 +768,13 @@ def plot_detectors_overlay():
 
 
 if __name__ == "__main__":
+    plot_beam_composition()
     plot_energy_deposition_per_detector()
     plot_energy_per_particle_per_detector()
     plot_total_energy_loss_per_particle()
     plot_landau_fit_per_detector()
     plot_mpv_vs_detector()
     plot_landau_fit_protons()
+    plot_landau_fit_kaons()
     plot_mpv_pioes_vs_protoes()
     plot_detectors_overlay()
