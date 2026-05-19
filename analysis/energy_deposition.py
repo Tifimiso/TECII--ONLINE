@@ -738,9 +738,10 @@ def plot_mpv_pioes_vs_protoes():
     nBins  = 300
     minBin = 0.0
 
+    # fitLow e fitHigh consistentes com plot_landau_fit_per_detector e plot_resolution_per_species
     particulas = [
-        ("Pioes",   ROOT.kRed+1,     ROOT.kRed+1,     "(particlePDG==211 || particlePDG==-211)", 8.0,  21),
-        ("Protoes", ROOT.kMagenta+1, ROOT.kMagenta+1, "particlePDG==2212",                       20.0, 22),
+        ("Pioes",   ROOT.kRed+1,     ROOT.kRed+1,     "(particlePDG==211 || particlePDG==-211)", 8.0,  0.3, 5.0,  21),
+        ("Protoes", ROOT.kMagenta+1, ROOT.kMagenta+1, "particlePDG==2212",                       20.0, 1.0, 15.0, 22),
     ]
 
     canvas = ROOT.TCanvas("c_mpv_compare", "", 800, 600)
@@ -751,7 +752,7 @@ def plot_mpv_pioes_vs_protoes():
 
     # primeiro recolher todos os MPV (sem desenhar nada)
     graficos = []
-    for nome, corM, corL, selecaoPDG, maxBin, marcador in particulas:
+    for nome, corM, corL, selecaoPDG, maxBin, fitLow, fitHigh, marcador in particulas:
         mpv_vals = []
         mpv_errs = []
 
@@ -764,7 +765,7 @@ def plot_mpv_pioes_vs_protoes():
             histo = ROOT.TH1D(histoName, "", nBins, minBin, maxBin)
             dados.Draw("{}>>{}".format(exprMeV, histoName), selecao, "goff")  # goff = sem desenhar
 
-            landauFit = ROOT.TF1("landauCmp_{}_{}".format(nome, i), "landau", 0.3, maxBin * 0.7)
+            landauFit = ROOT.TF1("landauCmp_{}_{}".format(nome, i), "landau", fitLow, fitHigh)
             histo.Fit(landauFit, "RQ0")  # 0 = nao desenhar o fit
 
             mpv_vals.append(landauFit.GetParameter(1))
