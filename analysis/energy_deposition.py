@@ -14,6 +14,7 @@ Analises incluidas:
     8.  MPV vs massa da particula — confirmacao da formula de Bethe-Bloch.
     9.  Sobreposicao dos 4 detetores para verificacao de consistencia.
     10. dE/dx vs momento — bandas de Bethe-Bloch para identificacao de particulas.
+    11. Resolucao relativa (sigma/MPV) e poder de separacao entre especies.
 """
 
 import os
@@ -939,6 +940,135 @@ def plot_dedx_vs_momentum():
     print("[OK] plot_dedx_vs_momentum")
 
 
+def plot_resolution_per_species():
+    """
+    Resolucao relativa do detetor: sigma/MPV do fit de Landau em funcao do
+    numero do detetor, para pioes, kaoes e protoes.
+
+    sigma/MPV mede a largura relativa da distribuicao de Landau — valores mais
+    baixos indicam melhor capacidade de identificacao de particulas (PID).
+
+    Tambem calcula o poder de separacao entre pioes e protoes:
+        N_sigma = |MPV_p - MPV_pi| / sqrt(sigma_p^2 + sigma_pi^2)
+    O criterio padrao de PID eficiente e N_sigma > 3.
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    KEV_TO_MEV = 1e-3
+    dados = carregar_chain("tracksData")
+
+    especies = [
+        ("Pioes",   ROOT.kRed+1,     "(particlePDG==211||particlePDG==-211)", 8.0,  0.3, 5.0,  21),
+        ("Kaoes",   ROOT.kCyan+2,    "(particlePDG==321||particlePDG==-321)", 12.0, 0.5, 8.0,  22),
+        ("Protoes", ROOT.kMagenta+1, "particlePDG==2212",                     20.0, 1.0, 15.0, 23),
+    ]
+
+    nBins = 300
+    canvas = ROOT.TCanvas("c_resolucao", "", 800, 600)
+    canvas.SetGrid()
+
+    legenda = ROOT.TLegend(0.65, 0.65, 0.88, 0.88)
+    legenda.SetBorderSize(1)
+
+    resultados = {}
+    graficos   = []
+
+    ROOT.gStyle.SetOptStat(0)
+    ROOT.gStyle.SetOptFit(0)
+
+    for k, (nome, cor, selecao, maxBin, fitLow, fitHigh, marcador) in enumerate(especies):
+        resolucoes    = []
+        resolucao_err = []
+        mpv_vals      = []
+        sigma_vals    = []
+
+        for i in range(4):
+            branchName = "EdepDet{}_keV".format(i)
+            exprMeV    = "{}*{}".format(branchName, KEV_TO_MEV)
+            sel = "{} && {}>10 && momentum_GeV>0.5".format(selecao, branchName)
+
+            histoName = "hRes_{}_{}".format(nome, i)
+            histo = ROOT.TH1D(histoName, "", nBins, 0.0, maxBin)
+            dados.Draw("{}>>{}".format(exprMeV, histoName), sel, "goff")
+
+            if histo.GetEntries() < 50:
+                resolucoes.append(0)
+                resolucao_err.append(0)
+                mpv_vals.append(0)
+                sigma_vals.append(0)
+                continue
+
+            landauFit = ROOT.TF1("landauRes_{}_{}".format(nome, i), "landau", fitLow, fitHigh)
+            histo.Fit(landauFit, "RQ0")
+
+            mpv       = landauFit.GetParameter(1)
+            sigma     = landauFit.GetParameter(2)
+            mpv_err_v = landauFit.GetParError(1)
+            sig_err_v = landauFit.GetParError(2)
+
+            if mpv > 0 and sigma > 0:
+                res     = sigma / mpv
+                res_err = res * ((sig_err_v / sigma)**2 + (mpv_err_v / mpv)**2)**0.5
+            else:
+                res, res_err = 0.0, 0.0
+
+            resolucoes.append(res)
+            resolucao_err.append(res_err)
+            mpv_vals.append(mpv)
+            sigma_vals.append(sigma)
+
+        resultados[nome] = {"mpv": mpv_vals, "sigma": sigma_vals}
+
+        graf = ROOT.TGraphErrors(4)
+        for i in range(4):
+            graf.SetPoint(i, i, resolucoes[i])
+            graf.SetPointError(i, 0.0, resolucao_err[i])
+
+        graf.SetMarkerStyle(marcador)
+        graf.SetMarkerSize(1.5)
+        graf.SetMarkerColor(cor)
+        graf.SetLineColor(cor)
+        graf.SetLineWidth(2)
+
+        opcao = "AP" if k == 0 else "P SAME"
+        graf.Draw(opcao)
+        legenda.AddEntry(graf, nome, "p")
+        graficos.append(graf)
+
+    graficos[0].SetTitle(
+        "#sigma/MPV por especie vs numero do detetor;"
+        "Numero do detetor;#sigma / MPV")
+    graficos[0].GetXaxis().SetLimits(-0.5, 3.5)
+    graficos[0].GetXaxis().SetNdivisions(4)
+    graficos[0].SetMinimum(0.0)
+    graficos[0].SetMaximum(0.30)
+
+    legenda.Draw()
+    canvas.SaveAs("{}/resolucao_por_especie.png".format(OUTPUT_DIR))
+    canvas.Close()
+
+    print("[OK] plot_resolution_per_species")
+    print("  Resolucao sigma/MPV por especie:")
+    for nome in resultados:
+        mpvs   = resultados[nome]["mpv"]
+        sigmas = resultados[nome]["sigma"]
+        for i in range(4):
+            if mpvs[i] > 0:
+                print("    {:8s} det {}: sigma/MPV = {:.4f}".format(
+                    nome, i, sigmas[i] / mpvs[i]))
+
+    print("  Poder de separacao pi vs p (N_sigma = |MPV_p - MPV_pi| / sqrt(s_p^2 + s_pi^2)):")
+    for i in range(4):
+        mp_pi = resultados.get("Pioes",   {}).get("mpv",   [0]*4)[i]
+        mp_p  = resultados.get("Protoes", {}).get("mpv",   [0]*4)[i]
+        s_pi  = resultados.get("Pioes",   {}).get("sigma", [0]*4)[i]
+        s_p   = resultados.get("Protoes", {}).get("sigma", [0]*4)[i]
+        if mp_pi > 0 and mp_p > 0 and s_pi > 0 and s_p > 0:
+            sep = abs(mp_p - mp_pi) / (s_pi**2 + s_p**2)**0.5
+            print("    Detetor {}: {:.2f} sigma".format(i, sep))
+
+    ROOT.gStyle.SetOptStat(1)
+
+
 if __name__ == "__main__":
     plot_beam_composition()
     plot_energy_deposition_per_detector()
@@ -952,3 +1082,4 @@ if __name__ == "__main__":
     plot_mpv_pioes_vs_protoes()
     plot_detectors_overlay()
     plot_dedx_vs_momentum()
+    plot_resolution_per_species()
