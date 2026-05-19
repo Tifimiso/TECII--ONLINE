@@ -1,37 +1,432 @@
 \documentclass[12pt,a4paper]{article}
 \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage[portuguese]{babel}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
 \usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{siunitx}
+\usepackage{array}
+\usepackage{xcolor}
 
-\title{Tópicos em Engenharia Computacional II\\Trabalho Prático 2024/2025}
-\author{}
-\date{}
+\geometry{margin=2.5cm}
+\captionsetup{font=small, labelfont=bf}
+\sisetup{separate-uncertainty=true}
+
+\title{%
+  \textbf{Tópicos em Engenharia Computacional II}\\[0.4em]
+  \large Trabalho Prático 2024/2025\\[0.2em]
+  \normalsize Simulação e Análise do Detector AMBER Target no CERN
+}
+\author{Diana Monteiro \and [Nome Colega 2] \and [Nome Colega 3] \and José [Apelido]}
+\date{Universidade de Aveiro, \today}
 
 \begin{document}
 
 \maketitle
-
 \tableofcontents
 \newpage
 
+%=============================================================================
 \section{Introdução}
+%=============================================================================
 
+O projeto AMBER (\textit{Apparatus for Meson and Baryon Experimental Research})
+é um experimento de física hadrónica localizado no Super Proton Synchrotron (SPS)
+do CERN, concebido para estudar a estrutura hadrónica e as interações de partículas
+com alvos fixos~\cite{amber2022}.
+
+Este trabalho tem como objetivo simular o detector AMBER Target usando o
+\textit{framework} Geant4 e analisar as distribuições de deposição de energia,
+hits, vértices hadrónicos, distribuição temporal e distribuição do momento das
+partículas produzidas. A simulação permite reproduzir, em ambiente controlado,
+as condições experimentais do feixe de partículas do CERN SPS, validando a
+resposta do detetor e a capacidade de identificação de partículas.
+
+A análise foi efectuada com PyROOT sobre quatro ficheiros de dados simulados
+(AmberTarget\_Run\_0 a Run\_3), totalizando $3.3 \times 10^6$ tracks.
+
+%=============================================================================
 \section{Dados e Metodologia}
+%=============================================================================
 
+\subsection*{Dados de simulação}
+
+Os dados foram gerados por simulações Geant4 e armazenados em formato ROOT.
+Cada run corresponde a uma simulação independente do mesmo cenário experimental.
+A análise combina os quatro runs usando \texttt{TChain}, garantindo estatística
+suficiente para ajustes robustos.
+
+As árvores ROOT utilizadas são:
+\begin{itemize}
+  \item \texttt{tracksData} — informação por track: PDG code, momento
+    (\texttt{momentum\_GeV}), deposição de energia por detetor em keV
+    (\texttt{EdepDet0\_keV} a \texttt{EdepDet3\_keV}).
+  \item \texttt{edep\_Per\_Event} — deposição de energia total por evento
+    em eV (\texttt{detector0} a \texttt{detector3}).
+  \item \texttt{hadronicVertex} — posição dos vértices hadrónicos
+    (\texttt{vertexPosZ\_cm}, \texttt{IsPrimary}).
+\end{itemize}
+
+\subsection*{Metodologia}
+
+As espécies de partículas foram identificadas pelo código PDG:
+electrões/positrões ($\pm 11$), fotões ($22$), piões carregados ($\pm 211$),
+protões ($2212$), kaões carregados ($\pm 321$) e muões ($\pm 13$).
+
+Para o ajuste de Landau aplicaram-se os seguintes filtros, consistentes com
+os macros ROOT de referência (\texttt{fitLandau.C}):
+\begin{itemize}
+  \item $E_\text{dep} > \SI{10}{keV}$ — eliminar deposições residuais e ruído;
+  \item $p > 0.5~\text{GeV}/c$ — selecionar partículas relativistas na região de
+    mínimo de ionização, onde a distribuição de Landau é válida.
+\end{itemize}
+
+Os ajustes foram efectuados com a função \texttt{landau} do ROOT no intervalo
+$[\SI{0.3}{MeV}, \SI{5.0}{MeV}]$ para piões, $[\SI{1.0}{MeV}, \SI{15.0}{MeV}]$
+para protões, e $[\SI{0.5}{MeV}, \SI{8.0}{MeV}]$ para kaões.
+
+%=============================================================================
 \section{Resultados}
+%=============================================================================
 
+%-----------------------------------------------------------------------------
 \subsection{Deposição de Energia}
+%-----------------------------------------------------------------------------
 
+\subsubsection{Composição do feixe}
+
+A Figura~\ref{fig:composicao_feixe} mostra a abundância relativa de cada
+espécie de partícula no feixe simulado, totalizando $3\,311\,783$ tracks
+distribuídos pelos quatro runs.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.75\textwidth]{plots/energy/composicao_feixe.png}
+  \caption{Composição do feixe simulado: número de tracks por espécie de
+    partícula (escala logarítmica). O feixe é dominado por fundo
+    electromagnético — electrões/positrões e fotões.}
+  \label{fig:composicao_feixe}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{Abundância relativa das espécies de partículas no feixe simulado
+    (4 runs combinados, $3.31 \times 10^6$ tracks).}
+  \label{tab:composicao}
+  \begin{tabular}{lrr}
+    \toprule
+    \textbf{Espécie} & \textbf{Tracks} & \textbf{Fracção (\%)} \\
+    \midrule
+    $e^\pm$       & $1\,700\,319$ & $51.3$ \\
+    $\gamma$      & $892\,312$    & $26.9$ \\
+    $\pi^\pm$     & $505\,871$    & $15.3$ \\
+    $p$           & $172\,125$    & $5.2$  \\
+    $K^\pm$       & $33\,216$     & $1.0$  \\
+    $\mu^\pm$     & $7\,940$      & $0.2$  \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+O feixe é dominado por fundo electromagnético: $e^\pm$ e $\gamma$ representam
+conjuntamente $78.2\%$ do total de tracks. Os piões ($15.3\%$) e protões ($5.2\%$)
+constituem as componentes hadrónicas principais. Os muões, que representam o
+sinal de interesse do experimento AMBER, correspondem apenas a $0.2\%$ do total,
+sublinhando a importância da capacidade de identificação e separação de partículas
+do detetor.
+
+\subsubsection{Deposição de energia por detetor}
+
+A Figura~\ref{fig:edep_detetores} apresenta os histogramas de deposição de
+energia total (todas as partículas) em cada um dos quatro detetores, usando a
+árvore \texttt{edep\_Per\_Event} (valores convertidos de eV para MeV).
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/edep_detector0.png}
+    \caption{Detetor 0}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/edep_detector1.png}
+    \caption{Detetor 1}
+  \end{subfigure}
+  \\[1em]
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/edep_detector2.png}
+    \caption{Detetor 2}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/edep_detector3.png}
+    \caption{Detetor 3}
+  \end{subfigure}
+  \caption{Histogramas de deposição de energia (escala logarítmica) em cada
+    detetor. A distribuição apresenta a forma assimétrica característica da
+    deposição de energia de partículas carregadas relativistas em matéria fina,
+    com pico de Landau na região $0.1$--$0.3$ MeV.}
+  \label{fig:edep_detetores}
+\end{figure}
+
+A Figura~\ref{fig:overlay} mostra os quatro detetores sobrepostos num único
+gráfico, permitindo comparar o comportamento entre eles.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{plots/energy/deposicao_energia_4detetores.png}
+  \caption{Sobreposição das distribuições de deposição de energia dos quatro
+    detetores. O detetor 0 apresenta um comportamento distinto dos restantes,
+    com ligeiramente menos eventos na região do pico, o que é consistente com
+    as partículas possuírem maior energia cinética na entrada do detetor.}
+  \label{fig:overlay}
+\end{figure}
+
+\subsubsection{Deposição de energia por espécie de partícula}
+
+A Figura~\ref{fig:edep_particulas} apresenta as distribuições de deposição de
+energia normalizadas a 1 para cada espécie, no detetor~0, permitindo comparar
+as formas independentemente da abundância relativa.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{plots/energy/edep_por_particula_detector0.png}
+  \caption{Deposição de energia por espécie de partícula no detetor~0 (normalizado
+    a 1, escala logarítmica). Cada espécie tem uma ``impressão digital'' distinta:
+    fotões cortam abruptamente ($\lesssim \SI{2}{MeV}$) pois não ionizam
+    directamente; protões têm cauda longa devido à maior massa e menor velocidade;
+    piões e muões apresentam perfis semelhantes na região relativista.}
+  \label{fig:edep_particulas}
+\end{figure}
+
+A Figura~\ref{fig:edep_total} mostra a distribuição da perda de energia total
+(soma dos quatro detetores) por espécie.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{plots/energy/edep_total_por_particula.png}
+  \caption{Perda de energia total (soma dos quatro detetores) por espécie de
+    partícula, normalizado a 1. Os protões apresentam uma distribuição alargada
+    e deslocada para energias superiores em relação aos piões, como previsto pela
+    fórmula de Bethe-Bloch para partículas de maior massa.}
+  \label{fig:edep_total}
+\end{figure}
+
+\subsubsection{Ajuste de distribuição de Landau}
+
+A deposição de energia de partículas carregadas relativistas em detectores de
+espessura fina segue uma distribuição de Landau~\cite{landau1944}. O ajuste
+foi efectuado separadamente para piões, protões e kaões, com os filtros
+descritos na Secção~2.
+
+A Figura~\ref{fig:landau_pioes} mostra o ajuste de Landau à deposição de
+energia de piões no detetor~0 (representativo dos quatro detetores).
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/landau_pioes_detector0.png}
+    \caption{Piões — Detetor 0}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/landau_protoes_detector0.png}
+    \caption{Protões — Detetor 0}
+  \end{subfigure}
+  \caption{Ajuste de distribuição de Landau à deposição de energia de piões
+    (esquerda) e protões (direita) no detetor~0 ($p > 0.5~\text{GeV}/c$,
+    $E_\text{dep} > \SI{10}{keV}$). O pico de Landau (MPV) dos protões é
+    claramente deslocado para energias superiores, reflectindo a maior massa
+    desta espécie.}
+  \label{fig:landau_pioes}
+\end{figure}
+
+A Tabela~\ref{tab:landau} resume os parâmetros do ajuste de Landau para as
+três espécies hadrónicas no detetor~0.
+
+\begin{table}[H]
+  \centering
+  \caption{Parâmetros do ajuste de Landau no detetor~0 para piões, kaões e
+    protões relativistas ($p > 0.5~\text{GeV}/c$).}
+  \label{tab:landau}
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Espécie} & \textbf{Massa} (MeV/$c^2$) &
+    \textbf{MPV} (MeV) & \textbf{$\sigma$} (MeV) \\
+    \midrule
+    $\pi^\pm$ & $139.6$ & $1.436 \pm 0.001$ & $0.084 \pm 0.000$ \\
+    $K^\pm$   & $493.7$ & $1.461 \pm 0.003$ & $0.105 \pm 0.001$ \\
+    $p$       & $938.3$ & $1.911 \pm 0.006$ & $0.324 \pm 0.003$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsubsection{Evolução do MPV ao longo dos detetores}
+
+A Figura~\ref{fig:mpv_vs_det} mostra a evolução do MPV e do $\sigma$ do ajuste
+de Landau em função do número do detetor, com ajuste linear sobreposto.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/mpv_vs_detector.png}
+    \caption{MPV vs.\ número do detetor}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/sigma_vs_detector.png}
+    \caption{$\sigma$ vs.\ número do detetor}
+  \end{subfigure}
+  \caption{Evolução do MPV (esquerda) e $\sigma$ (direita) do fit de Landau
+    para piões relativistas em função do número do detetor, com ajuste linear
+    (tracejado). Ambos os parâmetros decrescem monotonicamente ao longo do
+    trajecto.}
+  \label{fig:mpv_vs_det}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{Parâmetros do ajuste de Landau para piões em cada detetor e
+    respectivos declives do ajuste linear.}
+  \label{tab:mpv_vs_det}
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{Detetor} & \textbf{MPV (MeV)} & \textbf{$\sigma$ (MeV)} \\
+    \midrule
+    0 & $1.4362 \pm 0.0006$ & $0.0841 \pm 0.0003$ \\
+    1 & $1.4286 \pm 0.0004$ & $0.0812 \pm 0.0002$ \\
+    2 & $1.4175 \pm 0.0003$ & $0.0760 \pm 0.0002$ \\
+    3 & $1.4126 \pm 0.0003$ & $0.0734 \pm 0.0002$ \\
+    \midrule
+    Declive MPV        & \multicolumn{2}{c}{$-0.0080 \pm 0.0002$ MeV/detetor} \\
+    Declive $\sigma$   & \multicolumn{2}{c}{$-0.0037 \pm 0.0001$ MeV/detetor} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+O MPV diminui $\SI{8}{keV}$ por detetor, o que é consistente com a perda
+progressiva de energia prevista pela equação de Bethe-Bloch para partículas
+que atravessam matéria. A diminuição do $\sigma$ indica que a distribuição
+de deposição de energia se torna mais estreita ao longo do trajecto, reflectindo
+a maior homogeneidade energética das partículas após travessia de cada detetor.
+
+A Figura~\ref{fig:mpv_compare} apresenta a comparação entre piões e protões
+nos quatro detetores, evidenciando a diferença de escala de deposição de
+energia entre as duas espécies e a taxa de decrescimento distinta.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{plots/energy/mpv_pioes_vs_protoes.png}
+  \caption{MPV do fit de Landau em função do número do detetor para piões e
+    protões. Os protões depositam consistentemente mais energia ($\sim 33\%$
+    superior no detetor~0) e apresentam uma taxa de decrescimento mais acentuada,
+    o que é expectável para partículas mais pesadas que perdem energia mais
+    rapidamente por ionização.}
+  \label{fig:mpv_compare}
+\end{figure}
+
+\subsubsection{Confirmação da fórmula de Bethe-Bloch}
+
+A fórmula de Bethe-Bloch descreve a perda de energia por ionização de partículas
+carregadas relativistas em matéria:
+\begin{equation}
+  -\frac{dE}{dx} = K z^2 \frac{Z}{A} \frac{1}{\beta^2}
+  \left[ \frac{1}{2} \ln \frac{2 m_e c^2 \beta^2 \gamma^2 T_\text{max}}{I^2}
+  - \beta^2 \right]
+  \label{eq:bethe}
+\end{equation}
+onde $K = \SI{0.307}{MeV\,mol^{-1}\,cm^2}$, $z$ é a carga da partícula,
+$Z$ e $A$ são o número atómico e a massa molar do material, $\beta$ e $\gamma$
+os parâmetros relativistas, $m_e$ a massa do electrão, $T_\text{max}$ a energia
+máxima transferível num único choque e $I$ o potencial de ionização médio.
+
+Para partículas com o mesmo momento $p$, velocidades distintas $\beta$ (e portanto
+$\beta\gamma = p/mc$) implica diferenças em $dE/dx$. Partículas mais pesadas
+têm $\beta$ menor para o mesmo momento, o que aumenta o termo $1/\beta^2$ e,
+consequentemente, a perda de energia.
+
+A Figura~\ref{fig:mpv_massa} mostra o MPV extraído do ajuste de Landau em
+função da massa da partícula, usando o detetor~0 como referência.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{plots/energy/mpv_vs_massa.png}
+  \caption{MPV do fit de Landau em função da massa da partícula (detetor~0,
+    $p > 0.5~\text{GeV}/c$). O crescimento do MPV com a massa confirma
+    experimentalmente a dependência prevista pela fórmula de Bethe-Bloch:
+    partículas mais pesadas, com menor $\beta$ para o mesmo intervalo de momento,
+    depositam mais energia por unidade de comprimento.}
+  \label{fig:mpv_massa}
+\end{figure}
+
+Os resultados são coerentes com a equação~(\ref{eq:bethe}): o MPV aumenta de
+$1.44~\text{MeV}$ para piões ($m = 139.6~\text{MeV}/c^2$) para $1.88~\text{MeV}$
+para protões ($m = 938.3~\text{MeV}/c^2$), uma diferença de $\sim 31\%$.
+Os kaões ($m = 493.7~\text{MeV}/c^2$, MPV $= 1.46~\text{MeV}$) são intermédios
+mas mais próximos dos piões, o que é consistente com o facto de o regime de
+mínimo de ionização ser atingido a momenta mais elevados para partículas mais
+pesadas — a $p = 0.5~\text{GeV}/c$, os kaões estão menos relativistas que os piões.
+
+%-----------------------------------------------------------------------------
 \subsection{Distribuição de Hits}
+%-----------------------------------------------------------------------------
 
+% A completar pelo colega responsável.
+
+%-----------------------------------------------------------------------------
 \subsection{Vértices Hadrónicos}
+%-----------------------------------------------------------------------------
 
+% A completar pelo colega responsável.
+
+%-----------------------------------------------------------------------------
 \subsection{Distribuição Temporal}
+%-----------------------------------------------------------------------------
 
+% A completar pelo colega responsável.
+
+%-----------------------------------------------------------------------------
 \subsection{Distribuição do Momento}
+%-----------------------------------------------------------------------------
 
+% A completar pelo José.
+
+%=============================================================================
 \section{Conclusão}
+%=============================================================================
+
+% A completar em grupo após integração de todas as secções.
+
+%=============================================================================
+\begin{thebibliography}{9}
+
+\bibitem{amber2022}
+  AMBER Collaboration,
+  \textit{Letter of Intent for the AMBER Experiment at the CERN SPS},
+  CERN-SPSC-2019-022, 2019.
+
+\bibitem{landau1944}
+  L.~D.~Landau,
+  \textit{On the energy loss of fast particles by ionization},
+  J.\ Phys.\ USSR \textbf{8} (1944) 201.
+
+\bibitem{pdg2022}
+  Particle Data Group,
+  R.~L.~Workman et al.,
+  \textit{Review of Particle Physics},
+  Prog.\ Theor.\ Exp.\ Phys.\ \textbf{2022} (2022) 083C01.
+
+\bibitem{geant4}
+  S.~Agostinelli et al.\ (Geant4 Collaboration),
+  \textit{Geant4 — a simulation toolkit},
+  Nucl.\ Instrum.\ Meth.\ A \textbf{506} (2003) 250--303.
+
+\end{thebibliography}
 
 \end{document}
