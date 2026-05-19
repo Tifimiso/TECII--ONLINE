@@ -929,7 +929,8 @@ def plot_dedx_vs_momentum():
 
     profiles[0].SetTitle(
         "Perda de energia vs momento (detetor 0);"
-        "p (GeV/c);#langle dE/dx #rangle (MeV)")
+        "p (GeV/c);")
+    profiles[0].GetYaxis().SetTitle("#LT dE/dx #GT (MeV)")
     profiles[0].GetYaxis().SetRangeUser(0.3, 15.0)
     profiles[0].GetXaxis().SetMoreLogLabels()
 
