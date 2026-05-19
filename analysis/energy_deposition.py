@@ -4,18 +4,21 @@ energy_deposition.py
 Analise da deposicao de energia nos detetores.
 
 Analises incluidas:
-    1. Composicao do feixe — abundancia relativa de cada especie de particula.
-    2. Histograma de deposicao de energia em cada detetor.
-    3. Histograma de deposicao de energia por tipo de particula em cada detetor.
-    4. Histograma da perda de energia total nos detetores por tipo de particula.
-    5. Fit de distribuicao de Landau a pioes e protoes por detetor.
-    6. MPV e sigma do fit Landau vs numero de detetor (com ajuste linear).
-    7. Fit de Landau para kaoes — comparacao da serie piao/kaon/protao.
-    8. MPV vs massa da particula — confirmacao da formula de Bethe-Bloch.
-    9. Sobreposicao dos 4 detetores para verificacao de consistencia.
+    1.  Composicao do feixe — abundancia relativa de cada especie de particula.
+    2.  Histograma de deposicao de energia em cada detetor.
+    3.  Histograma de deposicao de energia por tipo de particula em cada detetor.
+    4.  Histograma da perda de energia total nos detetores por tipo de particula.
+    5.  Fit de distribuicao de Landau a pioes e protoes por detetor.
+    6.  MPV e sigma do fit Landau vs numero de detetor (com ajuste linear).
+    7.  Fit de Landau para kaoes — comparacao da serie piao/kaon/protao.
+    8.  MPV vs massa da particula — confirmacao da formula de Bethe-Bloch.
+    9.  Sobreposicao dos 4 detetores para verificacao de consistencia.
+    10. dE/dx vs momento — bandas de Bethe-Bloch para identificacao de particulas.
 """
 
 import os
+import math
+import array as arr
 import ROOT
 
 ROOT.gROOT.SetBatch(True)
@@ -856,6 +859,86 @@ def plot_detectors_overlay():
     print("[OK] plot_detectors_overlay")
 
 
+def plot_dedx_vs_momentum():
+    """
+    Grafico de dE/dx (deposicao de energia no detetor 0) vs momento para
+    pioes, kaoes e protoes — bandas de Bethe-Bloch para identificacao de
+    particulas (PID) por perda de energia.
+
+    Cada especie ocupa uma banda distinta a baixo momento; as bandas convergem
+    a alto momento (regime ultrarelativista), onde a separacao por dE/dx deixa
+    de ser praticavel.
+
+    Usa bins logaritmicos em momento e TProfile (valor medio por bin) para
+    mostrar a curva de Bethe-Bloch de cada especie.
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    KEV_TO_MEV = 1e-3
+    dados = carregar_chain("tracksData")
+
+    especies = [
+        ("Pioes",   "#pi^{#pm}", ROOT.kRed+1,     "(particlePDG==211||particlePDG==-211)"),
+        ("Kaoes",   "K^{#pm}",   ROOT.kCyan+2,    "(particlePDG==321||particlePDG==-321)"),
+        ("Protoes", "p",          ROOT.kMagenta+1, "particlePDG==2212"),
+    ]
+
+    # bins logaritmicos: 0.2 a 15 GeV/c em 50 intervalos
+    nBinsMom = 50
+    momMin, momMax = 0.2, 15.0
+    logBins = arr.array('d', [
+        10**(math.log10(momMin) + i * (math.log10(momMax) - math.log10(momMin)) / nBinsMom)
+        for i in range(nBinsMom + 1)
+    ])
+    nBinsE, eMin, eMax = 200, 0.05, 20.0
+
+    canvas = ROOT.TCanvas("c_dedx_mom", "", 900, 650)
+    canvas.SetLogx()
+    canvas.SetLogy()
+    canvas.SetGrid()
+    canvas.SetLeftMargin(0.12)
+
+    legenda = ROOT.TLegend(0.15, 0.65, 0.42, 0.88)
+    legenda.SetBorderSize(1)
+
+    profiles = []
+    h2list = []  # manter referencias para evitar garbage collection
+
+    for k, (nome, latex_nome, cor, selecao) in enumerate(especies):
+        sel = "{} && EdepDet0_keV>10 && momentum_GeV>{} && momentum_GeV<{}".format(
+            selecao, momMin, momMax)
+
+        histoName = "h2dedx_{}".format(nome)
+        h2 = ROOT.TH2D(histoName, "", nBinsMom, logBins, nBinsE, eMin, eMax)
+        dados.Draw("EdepDet0_keV*{}:momentum_GeV>>{}".format(KEV_TO_MEV, histoName),
+                   sel, "goff")
+
+        prof = h2.ProfileX("prof_dedx_{}".format(nome))
+        prof.SetLineColor(cor)
+        prof.SetMarkerColor(cor)
+        prof.SetMarkerStyle(20 + k)
+        prof.SetMarkerSize(0.9)
+        prof.SetLineWidth(2)
+
+        opcao = "E" if k == 0 else "E SAME"
+        prof.Draw(opcao)
+        legenda.AddEntry(prof, latex_nome, "lp")
+        profiles.append(prof)
+        h2list.append(h2)
+
+    profiles[0].SetTitle(
+        "Perda de energia vs momento (detetor 0);"
+        "p (GeV/c);#langle dE/dx #rangle (MeV)")
+    profiles[0].GetYaxis().SetRangeUser(0.3, 15.0)
+    profiles[0].GetXaxis().SetMoreLogLabels()
+
+    ROOT.gStyle.SetOptStat(0)
+    legenda.Draw()
+    canvas.SaveAs("{}/dedx_vs_momentum.png".format(OUTPUT_DIR))
+    canvas.Close()
+    ROOT.gStyle.SetOptStat(1)
+    print("[OK] plot_dedx_vs_momentum")
+
+
 if __name__ == "__main__":
     plot_beam_composition()
     plot_energy_deposition_per_detector()
@@ -868,3 +951,4 @@ if __name__ == "__main__":
     plot_mpv_vs_mass()
     plot_mpv_pioes_vs_protoes()
     plot_detectors_overlay()
+    plot_dedx_vs_momentum()
