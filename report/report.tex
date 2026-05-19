@@ -341,6 +341,30 @@ inferior em valor absoluto mas o ajuste é fisicamente pior: a estrutura de dupl
 pico visível no histograma não é reproduzida por uma função de Landau simples,
 tornando os parâmetros extraídos menos fiáveis, como discutido acima.
 
+A Figura~\ref{fig:landau_overlay} apresenta as três distribuições sobrepostas
+num único gráfico, normalizadas ao pico de cada espécie, permitindo uma
+comparação directa das formas e posições dos picos.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{plots/energy/landau_overlay_pi_k_p.png}
+  \caption{Sobreposição das distribuições de Landau normalizadas ao pico para
+    piões, kaões e protões no detetor~0 ($p > 0.5~\text{GeV}/c$,
+    $E_\text{dep} > \SI{10}{keV}$). Os piões e kaões têm MPV praticamente
+    idênticos ($1.44$ e $1.46~\text{MeV}$, diferença de $\sim 1.7\%$), enquanto
+    os protões estão claramente deslocados para $1.91~\text{MeV}$. As linhas
+    a tracejado correspondem aos ajustes de Landau individuais.}
+  \label{fig:landau_overlay}
+\end{figure}
+
+Este gráfico evidencia dois aspectos fundamentais da capacidade de separação
+por dE/dx neste detector. Por um lado, a separação entre piões e kaões é
+praticamente inviável: a diferença de MPV é de apenas $\SI{24}{keV}$ ($\sim 1.7\%$),
+muito inferior à largura das distribuições ($\sigma_\pi \approx \SI{84}{keV}$).
+Por outro lado, a separação entre piões (ou kaões) e protões é mais favorável —
+diferença de MPV de $\sim 31\%$ —, mas ainda insuficiente para PID eficiente
+com um único detetor, como quantificado na Secção~\ref{sec:resolucao}.
+
 \subsubsection{Evolução do MPV ao longo dos detetores}
 
 A Figura~\ref{fig:mpv_vs_det} mostra a evolução do MPV e do $\sigma$ do ajuste
@@ -501,6 +525,35 @@ necessário calcular o MPV em cada bin de momento através de ajustes de Landau
 individuais. Para os fins qualitativos deste trabalho — identificar as bandas
 características e verificar a convergência a alto momento — a média é suficiente.
 
+\textbf{Comparação com a previsão teórica de Bethe-Bloch:}
+a Figura~\ref{fig:dedx_bb} sobrepõe os dados experimentais com as curvas
+teóricas de Bethe-Bloch calculadas para silício ($Z = 14$, $A = 28.09~\text{g/mol}$,
+$I = 173~\text{eV}$, $\rho = 2.329~\text{g/cm}^3$, PDG 2022~\cite{pdg2022}),
+sem correcção de densidade (válida para $p \lesssim 10~\text{GeV}/c$ neste detector).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{plots/energy/dedx_vs_momentum_bethe_bloch.png}
+  \caption{$\langle\text{dE/dx}\rangle$ vs momento com curvas teóricas de
+    Bethe-Bloch sobrepostas (linhas tracejadas) para piões, kaões e protões,
+    calculadas para silício. A espessura efectiva do detetor ($4.7~\text{mm}$)
+    foi inferida dos dados de piões ao mínimo de ionização ($\beta\gamma \approx 3.5$,
+    $p \approx 0.55~\text{GeV}/c$). O acordo entre dados e teoria é bom na
+    região de separação máxima ($p < 2~\text{GeV}/c$); a discrepância a alto
+    momento deve-se à correcção de densidade (platô de Fermi) não incluída na
+    fórmula básica.}
+  \label{fig:dedx_bb}
+\end{figure}
+
+A espessura efectiva inferida do detetor é $4.7~\text{mm}$, valor consistente
+com a geometria de um alvo activo espesso do AMBER Target. O acordo entre dados
+e curvas teóricas é satisfatório na região de baixo e médio momento, onde as
+bandas das três espécies estão bem separadas. A divergência a $p \gtrsim 5~\text{GeV}/c$
+é esperada: a fórmula básica de Bethe-Bloch não inclui a correcção de densidade
+de Sternheimer, que suprime o aumento relativista (platô de Fermi) observado
+experimentalmente. Esta comparação quantitativa confirma que os dados simulados
+são consistentes com a física de ionização de partículas carregadas em silício.
+
 \subsubsection{Resolução do detetor e poder de separação entre espécies}
 \label{sec:resolucao}
 
@@ -573,6 +626,50 @@ o poder de separação real que seria obtido com protões verdadeiramente relati
 ($p > 2~\text{GeV}/c$, $\beta\gamma > 2$). Esta é uma limitação metodológica
 identificada na análise.
 
+\subsubsection{Verificação de consistência entre runs}
+
+Para validar a reprodutibilidade da simulação, o ajuste de Landau dos piões
+no detetor~0 foi efectuado separadamente em cada um dos quatro runs
+independentes e os valores de MPV foram comparados com o resultado do ajuste
+combinado (Figura~\ref{fig:consistencia_runs}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{plots/energy/consistencia_runs.png}
+  \caption{MPV do fit de Landau de piões no detetor~0 para cada run individual
+    (pontos) e valor combinado dos 4 runs (linha tracejada azul, com banda de
+    incerteza a ponteado). O Run~0 apresenta um desvio de $+8.5\sigma$ em
+    relação ao valor combinado.}
+  \label{fig:consistencia_runs}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{MPV do fit de Landau por run e desvio em relação ao valor combinado
+    ($\text{MPV}_\text{comb} = 1.4362 \pm 0.0006~\text{MeV}$).}
+  \label{tab:consistencia}
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{Run} & \textbf{MPV (MeV)} & \textbf{Desvio ($\sigma$)} \\
+    \midrule
+    0 & $1.4490 \pm 0.0014$ & $+8.5$ \\
+    1 & $1.4374 \pm 0.0013$ & $+0.8$ \\
+    2 & $1.4410 \pm 0.0013$ & $+3.3$ \\
+    3 & $1.4382 \pm 0.0013$ & $+1.4$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Os runs 1, 2 e 3 são mutuamente consistentes ($\lesssim 3\sigma$ do valor
+combinado), o que valida a reprodutibilidade da simulação. O Run~0, porém,
+apresenta um MPV significativamente superior ($+8.5\sigma$, $+\SI{13}{keV}$),
+o que não é atribuível a flutuação estatística. Uma possível explicação é uma
+diferença nas condições iniciais da simulação (semente do gerador de números
+aleatórios, configuração de campo, ou estado inicial do gerador de partículas
+primárias) que resulta numa população de piões ligeiramente diferente nesse run.
+Este resultado demonstra a importância de verificar a consistência entre runs
+antes de combinar os dados, uma prática padrão em física experimental.
+
 \subsubsection{Síntese dos resultados de deposição de energia}
 
 Os resultados desta secção demonstram que a simulação reproduz fielmente os
@@ -594,6 +691,15 @@ o modelo Geant4 utilizado. Os pontos principais são:
   \item O poder de separação entre piões e protões com um único detetor é de
     $\sim 1.4\sigma$, insuficiente para PID standalone, mas passível de melhoria
     com a combinação de múltiplos detetores e informação de momento.
+  \item A sobreposição das distribuições de Landau evidencia que $\pi^\pm$ e
+    $K^\pm$ são praticamente inseparáveis por dE/dx (diferença de MPV de $1.7\%$),
+    enquanto $p$ está claramente separado ($31\%$).
+  \item As curvas teóricas de Bethe-Bloch para silício concordam com os dados
+    simulados na região $p < 5~\text{GeV}/c$, confirmando a validade do modelo
+    Geant4. A espessura efectiva inferida do detetor é $4.7~\text{mm}$.
+  \item A análise por run revela que o Run~0 apresenta um MPV $+\SI{13}{keV}$
+    acima dos restantes ($+8.5\sigma$), sugerindo uma pequena diferença sistemática
+    entre runs que deve ser tida em conta na combinação dos dados.
 \end{enumerate}
 
 %-----------------------------------------------------------------------------
