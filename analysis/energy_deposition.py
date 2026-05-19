@@ -379,9 +379,67 @@ def plot_mpv_vs_detector():
     print("  Declive: {:.4f} +/- {:.4f} MeV/detetor".format(declive, declive_err))
 
 
+def plot_detectors_overlay():
+    """
+    Sobreposicao dos histogramas de deposicao de energia dos 4 detetores num so grafico.
+    Permite comparar directamente o comportamento de cada detetor e verificar
+    se existem diferencas sistematicas entre eles.
+    Tree: edep_Per_Event, campos detector0..3 (em eV) — convertidos para MeV.
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    dados = carregar_chain("edep_Per_Event")
+
+    nBins = 200
+    minBin = 0.0
+    maxBin = 0.6  # MeV
+
+    cores = [ROOT.kBlue+1, ROOT.kRed+1, ROOT.kGreen+2, ROOT.kOrange+1]
+
+    canvas = ROOT.TCanvas("c_overlay", "", 800, 600)
+    canvas.SetLogy()
+
+    legenda = ROOT.TLegend(0.65, 0.65, 0.88, 0.88)
+    legenda.SetBorderSize(1)
+
+    histos = []
+    for i in range(4):
+        branchName = "detector{}".format(i)
+        histoName  = "hOverlay_det{}".format(i)
+
+        histo = ROOT.TH1D(histoName,
+                          "Deposicao de energia — comparacao entre detetores;Energia (MeV);Contagens",
+                          nBins, minBin, maxBin)
+
+        dados.Draw("{}*{}>>{}" .format(branchName, EV_TO_MEV, histoName),
+                   "{}>0".format(branchName), "goff")
+
+        histo.SetLineColor(cores[i])
+        histo.SetLineWidth(2)
+
+        opcao = "HIST" if i == 0 else "HIST SAME"
+        histo.Draw(opcao)
+        legenda.AddEntry(histo, "Detetor {}".format(i), "l")
+        histos.append(histo)
+
+    # ajustar eixo Y ao maximo
+    maximo = max(h.GetMaximum() for h in histos)
+    histos[0].SetMaximum(maximo * 3)
+    histos[0].SetMinimum(0.5)
+
+    ROOT.gStyle.SetOptStat(0)
+    legenda.Draw()
+    canvas.SaveAs("{}/deposicao_energia_4detetores.png".format(OUTPUT_DIR))
+    canvas.Close()
+
+    ROOT.gStyle.SetOptStat(1)
+    print("[OK] plot_detectors_overlay")
+
+
 if __name__ == "__main__":
     plot_energy_deposition_per_detector()
     plot_energy_per_particle_per_detector()
     plot_total_energy_loss_per_particle()
     plot_landau_fit_per_detector()
     plot_mpv_vs_detector()
+    plot_detectors_overlay()
