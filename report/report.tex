@@ -111,8 +111,11 @@ Para o ajuste de Landau aplicaram-se os seguintes filtros, consistentes com
 os macros ROOT de referência (\texttt{fitLandau.C}):
 \begin{itemize}
   \item $E_\text{dep} > \SI{10}{keV}$ — eliminar deposições residuais e ruído;
-  \item $p > 0.5~\text{GeV}/c$ — selecionar partículas relativistas na região de
-    mínimo de ionização, onde a distribuição de Landau é válida.
+  \item $p > 0.5~\text{GeV}/c$ — selecionar partículas com momento suficiente
+    para que a deposição de energia siga uma distribuição de Landau bem definida.
+    Este corte é adequado para piões ($\beta\gamma \approx 3.6$, próximo do mínimo
+    de ionização), mas menos rigoroso para protões ($\beta\gamma \approx 0.53$),
+    como discutido na Secção~\ref{sec:resolucao}.
 \end{itemize}
 
 Os ajustes foram efectuados com a função \texttt{landau} do ROOT no intervalo
@@ -163,10 +166,12 @@ distribuídos pelos quatro runs.
 
 O feixe é dominado por fundo electromagnético: $e^\pm$ e $\gamma$ representam
 conjuntamente $78.2\%$ do total de tracks. Os piões ($15.3\%$) e protões ($5.2\%$)
-constituem as componentes hadrónicas principais. Os muões, que representam o
-sinal de interesse do experimento AMBER, correspondem apenas a $0.2\%$ do total,
-sublinhando a importância da capacidade de identificação e separação de partículas
-do detetor.
+constituem as componentes hadrónicas principais. Os piões ($15.3\%$), que constituem o sinal hadrónico primário do experimento
+AMBER para o estudo da estrutura do pião, e os protões ($5.2\%$) são as
+componentes de maior interesse físico. A presença de muões ($0.2\%$) é
+residual e resulta do decaimento de piões em voo ($\pi^\pm \to \mu^\pm + \nu_\mu$).
+A elevada fracção de fundo electromagnético ($78.2\%$) sublinha a importância
+da capacidade de identificação e rejeição de partículas do detetor.
 
 \subsubsection{Deposição de energia por detetor}
 
@@ -209,9 +214,11 @@ gráfico, permitindo comparar o comportamento entre eles.
   \centering
   \includegraphics[width=0.72\textwidth]{plots/energy/deposicao_energia_4detetores.png}
   \caption{Sobreposição das distribuições de deposição de energia dos quatro
-    detetores. O detetor 0 apresenta um comportamento distinto dos restantes,
-    com ligeiramente menos eventos na região do pico, o que é consistente com
-    as partículas possuírem maior energia cinética na entrada do detetor.}
+    detetores. O detetor 0 apresenta um comportamento distinto dos restantes:
+    vê o feixe primário antes de qualquer interação no alvo, enquanto os
+    detetores 1--3 registam partículas que já atravessaram material e podem
+    ter sofrido interações, resultando numa composição e espectro de energia
+    ligeiramente diferentes.}
   \label{fig:overlay}
 \end{figure}
 
@@ -287,7 +294,7 @@ três espécies hadrónicas no detetor~0.
     \textbf{Espécie} & \textbf{Massa} (MeV/$c^2$) &
     \textbf{MPV} (MeV) & \textbf{$\sigma$} (MeV) \\
     \midrule
-    $\pi^\pm$ & $139.6$ & $1.436 \pm 0.001$ & $0.084 \pm 0.000$ \\
+    $\pi^\pm$ & $139.6$ & $1.436 \pm 0.001$ & $0.0841 \pm 0.0003$ \\
     $K^\pm$   & $493.7$ & $1.461 \pm 0.003$ & $0.105 \pm 0.001$ \\
     $p$       & $938.3$ & $1.911 \pm 0.006$ & $0.324 \pm 0.003$ \\
     \bottomrule
@@ -447,6 +454,7 @@ individuais. Para os fins qualitativos deste trabalho — identificar as bandas
 características e verificar a convergência a alto momento — a média é suficiente.
 
 \subsubsection{Resolução do detetor e poder de separação entre espécies}
+\label{sec:resolucao}
 
 A Figura~\ref{fig:resolucao} apresenta a resolução relativa $\sigma/\text{MPV}$
 do ajuste de Landau em função do número do detetor, para as três espécies hadrónicas.
