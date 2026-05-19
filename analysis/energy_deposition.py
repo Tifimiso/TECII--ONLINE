@@ -19,11 +19,24 @@ ROOT.gROOT.SetStyle("Plain")
 ROOT.gStyle.SetOptStat(1)
 ROOT.gStyle.SetOptTitle(1)
 
-DATA_FILE = "data/AmberTarget_Run_0.root"
+DATA_FILES = [
+    "data/AmberTarget_Run_0.root",
+    "data/AmberTarget_Run_1.root",
+    "data/AmberTarget_Run_2.root",
+    "data/AmberTarget_Run_3.root",
+]
 OUTPUT_DIR = "plots/energy"
 
 # Fator de conversao eV -> MeV
 EV_TO_MEV = 1e-6
+
+
+def carregar_chain(tree_name):
+    """Carrega uma TTree de todos os runs numa TChain."""
+    chain = ROOT.TChain(tree_name)
+    for f in DATA_FILES:
+        chain.Add(f)
+    return chain
 
 
 def plot_energy_deposition_per_detector():
@@ -33,8 +46,7 @@ def plot_energy_deposition_per_detector():
     """
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    ficheiro = ROOT.TFile(DATA_FILE, "READ")
-    dados = ficheiro.Get("edep_Per_Event")
+    dados = carregar_chain("edep_Per_Event")
 
     nBins = 200
     minBin = 0.0
@@ -62,7 +74,6 @@ def plot_energy_deposition_per_detector():
         canvas.SaveAs("{}/edep_detector{}.png".format(OUTPUT_DIR, i))
         canvas.Close()
 
-    ficheiro.Close()
     print("[OK] plot_energy_deposition_per_detector")
 
 
@@ -70,13 +81,14 @@ def plot_energy_per_particle_per_detector():
     """
     Histograma de deposicao de energia por tipo de particula em cada detetor.
     Tree: tracksData, campos EdepDet0_keV..EdepDet3_keV — convertidos para MeV.
-    Particulas: muoes (PDG +/-13), pioes (PDG +/-211), outras (e-, e+, p, kaoes, etc.).
+    Particulas identificadas pelos PDG codes presentes nos dados:
+        muoes (PDG +/-13), pioes (PDG +/-211), electroes/positroes (PDG +/-11),
+        fotoes (PDG 22), protoes (PDG 2212), kaoes (PDG +/-321).
     Histogramas normalizados a 1 para comparar formas independentemente da abundancia.
     """
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    ficheiro = ROOT.TFile(DATA_FILE, "READ")
-    dados = ficheiro.Get("tracksData")
+    dados = carregar_chain("tracksData")
 
     # fator de conversao keV -> MeV
     KEV_TO_MEV = 1e-3
@@ -86,9 +98,12 @@ def plot_energy_per_particle_per_detector():
     maxBin = 10.0  # 10 MeV — cobre a regiao com dados significativos
 
     particulas = [
-        ("Muoes",  ROOT.kBlue,    "(particlePDG==13 || particlePDG==-13)"),
-        ("Pioes",  ROOT.kRed,     "(particlePDG==211 || particlePDG==-211)"),
-        ("Outras (e, p, K, ...)", ROOT.kGreen+2, "(particlePDG!=13 && particlePDG!=-13 && particlePDG!=211 && particlePDG!=-211)"),
+        ("Muoes",              ROOT.kBlue,      "(particlePDG==13 || particlePDG==-13)"),
+        ("Pioes",              ROOT.kRed,       "(particlePDG==211 || particlePDG==-211)"),
+        ("Electroes/Positroes",ROOT.kOrange+1,  "(particlePDG==11 || particlePDG==-11)"),
+        ("Fotoes",             ROOT.kGreen+2,   "(particlePDG==22)"),
+        ("Protoes",            ROOT.kMagenta+1, "(particlePDG==2212)"),
+        ("Kaoes",              ROOT.kCyan+1,    "(particlePDG==321 || particlePDG==-321)"),
     ]
 
     for i in range(4):
@@ -98,7 +113,7 @@ def plot_energy_per_particle_per_detector():
         canvas = ROOT.TCanvas("c_part_det{}".format(i), "", 800, 600)
         canvas.SetLogy()
 
-        legenda = ROOT.TLegend(0.58, 0.70, 0.88, 0.88)
+        legenda = ROOT.TLegend(0.58, 0.58, 0.88, 0.88)
         legenda.SetBorderSize(1)
 
         histos = []
@@ -136,7 +151,6 @@ def plot_energy_per_particle_per_detector():
         canvas.Close()
 
     ROOT.gStyle.SetOptStat(1)
-    ficheiro.Close()
     print("[OK] plot_energy_per_particle_per_detector")
 
 
@@ -147,8 +161,7 @@ def plot_total_energy_loss_per_particle():
     """
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    ficheiro = ROOT.TFile(DATA_FILE, "READ")
-    dados = ficheiro.Get("tracksData")
+    dados = carregar_chain("tracksData")
 
     KEV_TO_MEV = 1e-3
 
@@ -160,15 +173,18 @@ def plot_total_energy_loss_per_particle():
     somaOriginal = "EdepDet0_keV+EdepDet1_keV+EdepDet2_keV+EdepDet3_keV"
 
     particulas = [
-        ("Muoes",  ROOT.kBlue,    "(particlePDG==13 || particlePDG==-13)"),
-        ("Pioes",  ROOT.kRed,     "(particlePDG==211 || particlePDG==-211)"),
-        ("Outras (e, p, K, ...)", ROOT.kGreen+2, "(particlePDG!=13 && particlePDG!=-13 && particlePDG!=211 && particlePDG!=-211)"),
+        ("Muoes",              ROOT.kBlue,      "(particlePDG==13 || particlePDG==-13)"),
+        ("Pioes",              ROOT.kRed,       "(particlePDG==211 || particlePDG==-211)"),
+        ("Electroes/Positroes",ROOT.kOrange+1,  "(particlePDG==11 || particlePDG==-11)"),
+        ("Fotoes",             ROOT.kGreen+2,   "(particlePDG==22)"),
+        ("Protoes",            ROOT.kMagenta+1, "(particlePDG==2212)"),
+        ("Kaoes",              ROOT.kCyan+1,    "(particlePDG==321 || particlePDG==-321)"),
     ]
 
     canvas = ROOT.TCanvas("c_total", "", 800, 600)
     canvas.SetLogy()
 
-    legenda = ROOT.TLegend(0.58, 0.70, 0.88, 0.88)
+    legenda = ROOT.TLegend(0.58, 0.58, 0.88, 0.88)
     legenda.SetBorderSize(1)
 
     histos = []
@@ -204,7 +220,6 @@ def plot_total_energy_loss_per_particle():
     canvas.SaveAs("{}/edep_total_por_particula.png".format(OUTPUT_DIR))
     canvas.Close()
 
-    ficheiro.Close()
     print("[OK] plot_total_energy_loss_per_particle")
 
 
@@ -225,8 +240,7 @@ def plot_landau_fit_per_detector():
 
     KEV_TO_MEV = 1e-3
 
-    ficheiro = ROOT.TFile(DATA_FILE, "READ")
-    dados = ficheiro.Get("tracksData")
+    dados = carregar_chain("tracksData")
 
     nBins = 300
     minBin = 0.0
@@ -278,7 +292,6 @@ def plot_landau_fit_per_detector():
 
     ROOT.gStyle.SetOptStat(1)
     ROOT.gStyle.SetOptFit(0)
-    ficheiro.Close()
     print("[OK] plot_landau_fit_per_detector")
 
 
@@ -291,8 +304,7 @@ def plot_mpv_vs_detector():
 
     KEV_TO_MEV = 1e-3
 
-    ficheiro = ROOT.TFile(DATA_FILE, "READ")
-    dados = ficheiro.Get("tracksData")
+    dados = carregar_chain("tracksData")
 
     nBins = 300
     minBin = 0.0
@@ -320,8 +332,6 @@ def plot_mpv_vs_detector():
         sigma_values.append(landauFit.GetParameter(2))
         sigma_errors.append(landauFit.GetParError(2))
 
-    ficheiro.Close()
-
     # construir o grafico com barras de erro
     n = 4
     detectors = ROOT.TGraphErrors(n)
@@ -346,12 +356,27 @@ def plot_mpv_vs_detector():
     detectors.GetXaxis().SetNdivisions(4)
     detectors.GetYaxis().SetTitleOffset(1.3)
 
+    # ajuste linear — o declive indica a perda de MPV por detetor
+    ajusteLinear = ROOT.TF1("ajusteLinear", "pol1", -0.5, 3.5)
+    ajusteLinear.SetLineColor(ROOT.kBlue + 1)
+    ajusteLinear.SetLineWidth(2)
+    ajusteLinear.SetLineStyle(2)  # tracejado para distinguir dos pontos
+    detectors.Fit(ajusteLinear, "Q")
+
+    declive     = ajusteLinear.GetParameter(1)
+    declive_err = ajusteLinear.GetParError(1)
+
+    ROOT.gStyle.SetOptFit(1)
+    detectors.Draw("AP")
+    ajusteLinear.Draw("SAME")
+
     canvas.SaveAs("{}/mpv_vs_detector.png".format(OUTPUT_DIR))
     canvas.Close()
 
     print("[OK] plot_mpv_vs_detector")
     for i in range(n):
         print("  Detetor {}: MPV = {:.4f} +/- {:.4f} MeV".format(i, mpv_values[i], mpv_errors[i]))
+    print("  Declive: {:.4f} +/- {:.4f} MeV/detetor".format(declive, declive_err))
 
 
 if __name__ == "__main__":
