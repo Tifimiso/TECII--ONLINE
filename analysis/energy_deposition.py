@@ -81,7 +81,7 @@ def plot_beam_composition():
     canvas = ROOT.TCanvas("c_beam", "", 900, 600)
     canvas.SetLogy()
     canvas.SetGrid()
-    canvas.SetBottomMargin(0.12)
+    canvas.SetBottomMargin(0.18)
 
     n = len(nomes)
     hbar = ROOT.TH1D("hBeam",
@@ -94,7 +94,7 @@ def plot_beam_composition():
 
     hbar.SetFillColor(ROOT.kBlue - 9)
     hbar.SetLineColor(ROOT.kBlue + 1)
-    hbar.GetXaxis().SetLabelSize(0.06)
+    hbar.GetXaxis().SetLabelSize(0.05)
     hbar.GetYaxis().SetTitleOffset(1.3)
 
     ROOT.gStyle.SetOptStat(0)
