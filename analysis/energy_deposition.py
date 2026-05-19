@@ -1071,6 +1071,327 @@ def plot_resolution_per_species():
     ROOT.gStyle.SetOptStat(1)
 
 
+# ---------------------------------------------------------------------------
+# helper: formula de Bethe-Bloch para silicio
+# ---------------------------------------------------------------------------
+
+def _bethe_bloch_dedx(p_gev, mass_gev):
+    """
+    Perda de energia media (Bethe-Bloch) em silicio para particula de carga z=1.
+    Devolve dE/dx em MeV*g^-1*cm^2 (sem correccao de densidade).
+    Parametros do silicio (PDG 2022): Z=14, A=28.09, I=173 eV.
+    """
+    K     = 0.307075   # MeV mol^-1 cm^2
+    me_c2 = 0.511      # MeV
+    Z, A  = 14, 28.09
+    I     = 173.0e-6   # MeV
+    M     = mass_gev * 1000.0
+    p     = p_gev  * 1000.0
+    if p <= 0 or M <= 0:
+        return 0.0
+    bg    = p / M
+    gamma = math.sqrt(1.0 + bg * bg)
+    beta2 = bg * bg / (1.0 + bg * bg)
+    Tmax  = (2.0 * me_c2 * bg * bg) / (
+        1.0 + 2.0 * gamma * me_c2 / M + (me_c2 / M) ** 2)
+    if beta2 <= 0 or Tmax <= 0:
+        return 0.0
+    arg = 2.0 * me_c2 * bg * bg * Tmax / (I * I)
+    if arg <= 1.0:
+        return 0.0
+    dedx = K * (Z / A) / beta2 * (0.5 * math.log(arg) - beta2)
+    return max(dedx, 0.0)
+
+
+def plot_landau_overlay():
+    """
+    Sobreposicao das distribuicoes de Landau ajustadas para pioes, kaoes e protoes
+    no detetor 0, normalizadas ao pico de cada especie.
+    Permite comparar directamente a posicao do MPV e a largura de cada distribuicao
+    num unico grafico — visualizacao classica de PID por dE/dx em fisica de particulas.
+    Evidencia que pioes e kaoes têm MPV muito proximos (separacao dificil) enquanto
+    os protoes estao claramente deslocados para energias superiores.
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    KEV_TO_MEV = 1e-3
+    dados = carregar_chain("tracksData")
+
+    especies = [
+        ("Pioes",   "#pi^{#pm}", ROOT.kRed+1,     "(particlePDG==211||particlePDG==-211)", 8.0,  0.3, 5.0),
+        ("Kaoes",   "K^{#pm}",   ROOT.kCyan+2,    "(particlePDG==321||particlePDG==-321)", 12.0, 0.5, 8.0),
+        ("Protoes", "p",          ROOT.kMagenta+1, "particlePDG==2212",                     20.0, 1.0, 15.0),
+    ]
+
+    nBins      = 300
+    branchName = "EdepDet0_keV"
+    exprMeV    = "{}*{}".format(branchName, KEV_TO_MEV)
+
+    canvas = ROOT.TCanvas("c_landau_overlay", "", 900, 600)
+    canvas.SetLogy()
+    canvas.SetGrid()
+    canvas.SetLeftMargin(0.12)
+
+    legenda = ROOT.TLegend(0.55, 0.65, 0.88, 0.88)
+    legenda.SetBorderSize(1)
+
+    ROOT.gStyle.SetOptStat(0)
+    ROOT.gStyle.SetOptFit(0)
+
+    histos    = []
+    fits_list = []
+
+    for k, (nome, latex_nome, cor, selecaoPDG, maxBin, fitLow, fitHigh) in enumerate(especies):
+        selecao   = "{} && {}>10 && momentum_GeV>0.5".format(selecaoPDG, branchName)
+        histoName = "hOvl_{}".format(nome)
+        histo = ROOT.TH1D(histoName, "", nBins, 0.0, maxBin)
+        dados.Draw("{}>>{}".format(exprMeV, histoName), selecao, "goff")
+
+        landauFit = ROOT.TF1("landauOvl_{}".format(nome), "landau", fitLow, fitHigh)
+        landauFit.SetLineColor(cor)
+        landauFit.SetLineWidth(2)
+        landauFit.SetLineStyle(2)
+        histo.Fit(landauFit, "RQ0")
+        mpv = landauFit.GetParameter(1)
+
+        # normalizar pelo pico para comparar formas (MPV nao depende da normalizacao)
+        peak = histo.GetMaximum()
+        if peak > 0:
+            histo.Scale(1.0 / peak)
+            landauFit.SetParameter(0, landauFit.GetParameter(0) / peak)
+
+        histo.SetLineColor(cor)
+        histo.SetLineWidth(2)
+        histo.SetFillStyle(0)
+
+        opcao = "HIST" if k == 0 else "HIST SAME"
+        histo.Draw(opcao)
+        legenda.AddEntry(histo, "{} (MPV = {:.2f} MeV)".format(latex_nome, mpv), "l")
+        histos.append(histo)
+        fits_list.append(landauFit)
+
+    for f in fits_list:
+        f.Draw("SAME")
+
+    histos[0].SetTitle(
+        "Sobreposicao das distribuicoes de Landau — pioes, kaoes e protoes (detetor 0);"
+        "Energia depositada (MeV);Contagens normalizadas ao pico")
+    histos[0].GetXaxis().SetRangeUser(0.0, 15.0)
+    histos[0].SetMaximum(3.0)
+    histos[0].SetMinimum(5e-5)
+
+    legenda.Draw()
+    canvas.SaveAs("{}/landau_overlay_pi_k_p.png".format(OUTPUT_DIR))
+    canvas.Close()
+
+    ROOT.gStyle.SetOptStat(1)
+    print("[OK] plot_landau_overlay")
+    for k, (nome, latex_nome, cor, selecaoPDG, maxBin, fitLow, fitHigh) in enumerate(especies):
+        print("  {}: MPV = {:.4f} MeV".format(nome, fits_list[k].GetParameter(1)))
+
+
+def plot_run_consistency():
+    """
+    Verifica a consistencia dos resultados entre os 4 runs independentes.
+    Ajusta a distribuicao de Landau de pioes no detetor 0 em cada run
+    separadamente e compara os valores de MPV com o resultado combinado.
+    Valida a estabilidade da simulacao e a reprodutibilidade dos resultados:
+    runs consistentes confirmam que as flutuacoes estatisticas dominam sobre
+    possiveis efeitos sistematicos entre runs.
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    KEV_TO_MEV = 1e-3
+    nBins      = 300
+    branchName = "EdepDet0_keV"
+    exprMeV    = "{}*{}".format(branchName, KEV_TO_MEV)
+    selecao    = "(particlePDG==211||particlePDG==-211) && {}>10 && momentum_GeV>0.5".format(branchName)
+
+    mpv_runs = []
+    mpv_errs = []
+
+    for i, run_file in enumerate(DATA_FILES):
+        chain = ROOT.TChain("tracksData")
+        chain.Add(run_file)
+        histoName = "hConsist_run{}".format(i)
+        histo = ROOT.TH1D(histoName, "", nBins, 0.0, 8.0)
+        chain.Draw("{}>>{}".format(exprMeV, histoName), selecao, "goff")
+        landauFit = ROOT.TF1("landauC_run{}".format(i), "landau", 0.3, 5.0)
+        histo.Fit(landauFit, "RQ0")
+        mpv_runs.append(landauFit.GetParameter(1))
+        mpv_errs.append(landauFit.GetParError(1))
+
+    # referencia: fit combinado dos 4 runs
+    chain_all = carregar_chain("tracksData")
+    hAll = ROOT.TH1D("hConsist_all", "", nBins, 0.0, 8.0)
+    chain_all.Draw("{}>>hConsist_all".format(exprMeV), selecao, "goff")
+    fitAll = ROOT.TF1("landauC_all", "landau", 0.3, 5.0)
+    hAll.Fit(fitAll, "RQ0")
+    mpv_ref = fitAll.GetParameter(1)
+    err_ref = fitAll.GetParError(1)
+
+    canvas = ROOT.TCanvas("c_consistency", "", 800, 600)
+    canvas.SetGrid()
+
+    n    = len(DATA_FILES)
+    graf = ROOT.TGraphErrors(n)
+    for i in range(n):
+        graf.SetPoint(i, i, mpv_runs[i])
+        graf.SetPointError(i, 0.0, mpv_errs[i])
+
+    graf.SetTitle(
+        "Consistencia do MPV de Landau entre runs (pioes, detetor 0);"
+        "Numero do run;MPV (MeV)")
+    graf.SetMarkerStyle(21)
+    graf.SetMarkerSize(1.5)
+    graf.SetMarkerColor(ROOT.kRed + 1)
+    graf.SetLineColor(ROOT.kRed + 1)
+    graf.SetLineWidth(2)
+    graf.Draw("AP")
+    graf.GetXaxis().SetLimits(-0.5, 3.5)
+    graf.GetXaxis().SetNdivisions(4)
+    graf.SetMinimum(mpv_ref * 0.990)
+    graf.SetMaximum(mpv_ref * 1.010)
+
+    # linha de referencia (MPV combinado) e banda de incerteza
+    lineRef = ROOT.TLine(-0.5, mpv_ref, 3.5, mpv_ref)
+    lineRef.SetLineColor(ROOT.kBlue + 1)
+    lineRef.SetLineWidth(2)
+    lineRef.SetLineStyle(2)
+    lineRef.Draw()
+    bandUp = ROOT.TLine(-0.5, mpv_ref + err_ref, 3.5, mpv_ref + err_ref)
+    bandDn = ROOT.TLine(-0.5, mpv_ref - err_ref, 3.5, mpv_ref - err_ref)
+    for line in [bandUp, bandDn]:
+        line.SetLineColor(ROOT.kBlue + 1)
+        line.SetLineWidth(1)
+        line.SetLineStyle(3)
+        line.Draw()
+
+    legenda = ROOT.TLegend(0.38, 0.75, 0.88, 0.88)
+    legenda.SetBorderSize(1)
+    legenda.AddEntry(graf, "MPV por run", "p")
+    legenda.AddEntry(lineRef, "MPV combinado ({:.4f} MeV)".format(mpv_ref), "l")
+    legenda.Draw()
+
+    ROOT.gStyle.SetOptStat(0)
+    canvas.SaveAs("{}/consistencia_runs.png".format(OUTPUT_DIR))
+    canvas.Close()
+    ROOT.gStyle.SetOptStat(1)
+
+    print("[OK] plot_run_consistency")
+    print("  MPV combinado: {:.4f} +/- {:.4f} MeV".format(mpv_ref, err_ref))
+    for i in range(n):
+        sigma_desvio = (mpv_runs[i] - mpv_ref) / math.sqrt(mpv_errs[i]**2 + err_ref**2)
+        print("  Run {}: MPV = {:.4f} +/- {:.4f} MeV  (desvio: {:+.1f} sigma)".format(
+            i, mpv_runs[i], mpv_errs[i], sigma_desvio))
+
+
+def plot_dedx_with_bethe_bloch():
+    """
+    Sobreposicao das curvas teoricas de Bethe-Bloch sobre o grafico experimental
+    dE/dx vs momento, para pioes, kaoes e protoes no detetor 0.
+    A espessura efectiva do detetor e inferida empiricamente a partir dos dados
+    de pioes ao minimo de ionizacao (betaGamma ~ 3.5, p ~ 0.55 GeV/c).
+    Parametros do silicio usados: Z=14, A=28.09, I=173 eV, rho=2.329 g/cm^3
+    (PDG 2022). Sem correccao de densidade (valido para p < 10 GeV/c neste detector).
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    KEV_TO_MEV = 1e-3
+    RHO_SI     = 2.329  # g/cm^3
+    dados = carregar_chain("tracksData")
+
+    especies = [
+        ("Pioes",   "#pi^{#pm}", ROOT.kRed+1,     "(particlePDG==211||particlePDG==-211)", 0.13957),
+        ("Kaoes",   "K^{#pm}",   ROOT.kCyan+2,    "(particlePDG==321||particlePDG==-321)", 0.49368),
+        ("Protoes", "p",          ROOT.kMagenta+1, "particlePDG==2212",                     0.93827),
+    ]
+
+    nBinsMom = 50
+    momMin, momMax = 0.2, 15.0
+    logBins = arr.array('d', [
+        10 ** (math.log10(momMin) + i * (math.log10(momMax) - math.log10(momMin)) / nBinsMom)
+        for i in range(nBinsMom + 1)
+    ])
+    nBinsE, eMin, eMax = 200, 0.05, 20.0
+
+    canvas = ROOT.TCanvas("c_dedx_bb", "", 900, 650)
+    canvas.SetLogx()
+    canvas.SetLogy()
+    canvas.SetGrid()
+    canvas.SetLeftMargin(0.12)
+
+    legenda = ROOT.TLegend(0.14, 0.48, 0.56, 0.88)
+    legenda.SetBorderSize(1)
+
+    profiles  = []
+    h2list    = []
+    graphs_bb = []  # manter referencias dos TGraph
+
+    for k, (nome, latex_nome, cor, selecao, mass_gev) in enumerate(especies):
+        sel = "{} && EdepDet0_keV>10 && momentum_GeV>{} && momentum_GeV<{}".format(
+            selecao, momMin, momMax)
+        histoName = "h2bb_{}".format(nome)
+        h2 = ROOT.TH2D(histoName, "", nBinsMom, logBins, nBinsE, eMin, eMax)
+        dados.Draw("EdepDet0_keV*{}:momentum_GeV>>{}".format(KEV_TO_MEV, histoName), sel, "goff")
+
+        prof = h2.ProfileX("prof_bb_{}".format(nome))
+        prof.SetLineColor(cor)
+        prof.SetMarkerColor(cor)
+        prof.SetMarkerStyle(20 + k)
+        prof.SetMarkerSize(0.9)
+        prof.SetLineWidth(2)
+
+        opcao = "E" if k == 0 else "E SAME"
+        prof.Draw(opcao)
+        legenda.AddEntry(prof, "{} (dados)".format(latex_nome), "lp")
+        profiles.append((prof, mass_gev, cor, latex_nome))
+        h2list.append(h2)
+
+    profiles[0][0].SetTitle(
+        "dE/dx vs momento — comparacao com Bethe-Bloch teorico (detetor 0);"
+        "p (GeV/c);")
+    profiles[0][0].GetYaxis().SetTitle("#LT dE/dx #GT (MeV)")
+    profiles[0][0].GetYaxis().SetRangeUser(0.3, 15.0)
+    profiles[0][0].GetXaxis().SetMoreLogLabels()
+
+    # inferir espessura efectiva do detetor a partir dos dados de pioes ao MIP
+    # (betaGamma ~ 3.5 para pioes a p ~ 0.55 GeV/c)
+    prof_pi  = profiles[0][0]
+    p_mip    = 0.55
+    bin_mip  = prof_pi.FindBin(p_mip)
+    data_mip = prof_pi.GetBinContent(bin_mip)
+    bb_mip   = _bethe_bloch_dedx(p_mip, 0.13957) * RHO_SI  # MeV/cm
+    thickness_cm = (data_mip / bb_mip) if bb_mip > 0 else 0.04
+
+    # curvas teoricas de Bethe-Bloch
+    n_pts = 200
+    for prof, mass_gev, cor, latex_nome in profiles:
+        x_bb = arr.array('d')
+        y_bb = arr.array('d')
+        for i in range(n_pts + 1):
+            p = 10 ** (math.log10(momMin) + i * (math.log10(momMax) - math.log10(momMin)) / n_pts)
+            dedx = _bethe_bloch_dedx(p, mass_gev) * RHO_SI * thickness_cm
+            if dedx > 0.1:
+                x_bb.append(p)
+                y_bb.append(dedx)
+        if len(x_bb) > 1:
+            g = ROOT.TGraph(len(x_bb), x_bb, y_bb)
+            g.SetLineColor(cor)
+            g.SetLineWidth(2)
+            g.SetLineStyle(2)
+            g.Draw("L SAME")
+            legenda.AddEntry(g, "{} (Bethe-Bloch)".format(latex_nome), "l")
+            graphs_bb.append(g)
+
+    ROOT.gStyle.SetOptStat(0)
+    legenda.Draw()
+    canvas.SaveAs("{}/dedx_vs_momentum_bethe_bloch.png".format(OUTPUT_DIR))
+    canvas.Close()
+    ROOT.gStyle.SetOptStat(1)
+
+    print("[OK] plot_dedx_with_bethe_bloch")
+    print("  Espessura efectiva inferida dos dados: {:.3f} cm = {:.1f} mm".format(
+        thickness_cm, thickness_cm * 10))
+
+
 if __name__ == "__main__":
     plot_beam_composition()
     plot_energy_deposition_per_detector()
@@ -1085,3 +1406,6 @@ if __name__ == "__main__":
     plot_detectors_overlay()
     plot_dedx_vs_momentum()
     plot_resolution_per_species()
+    plot_landau_overlay()
+    plot_run_consistency()
+    plot_dedx_with_bethe_bloch()
