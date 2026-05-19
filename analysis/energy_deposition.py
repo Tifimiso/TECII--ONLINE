@@ -689,6 +689,18 @@ def plot_mpv_vs_mass():
     graf.SetMinimum(1.3)
     graf.SetMaximum(2.1)
 
+    # ajuste de lei de potencia MPV ~ a * m^b como aproximacao da dependencia
+    # em massa de Bethe-Bloch a momento fixo (p > 0.5 GeV/c):
+    # particulas mais pesadas têm beta menor → 1/beta^2 maior → mais ionizacao
+    bbApprox = ROOT.TF1("bbApprox", "[0]*pow(x,[1])", 100.0, 1050.0)
+    bbApprox.SetParameter(0, 1.0)
+    bbApprox.SetParameter(1, 0.2)
+    bbApprox.SetLineColor(ROOT.kBlue + 1)
+    bbApprox.SetLineWidth(2)
+    bbApprox.SetLineStyle(2)  # tracejado para distinguir dos pontos experimentais
+    graf.Fit(bbApprox, "RQ")
+    bbApprox.Draw("SAME")
+
     # adicionar etiquetas com o nome de cada ponto
     labels = []
     offsets = [(30, 0.04), (30, 0.04), (30, 0.04)]
