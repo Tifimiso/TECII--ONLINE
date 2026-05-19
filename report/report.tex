@@ -326,6 +326,21 @@ O ajuste de Landau aos protões deve, por isso, ser interpretado com cautela ---
 os parâmetros MPV e $\sigma$ extraídos são estimativas aproximadas, não
 representativas de uma distribuição de Landau bem definida.
 
+\textbf{Qualidade estatística dos ajustes ($\chi^2$/ndf):}
+A avaliação quantitativa da qualidade dos ajustes é fornecida pelo $\chi^2$/ndf
+reportado pelo ROOT. No detetor~0 obtêm-se
+$\chi^2/\text{ndf} \approx 7196/173 \approx 42$ para piões e
+$\chi^2/\text{ndf} \approx 3146/165 \approx 19$ para protões. Ambos os valores
+são elevados em termos absolutos; no entanto, a interpretação é distinta.
+Para piões, com cerca de $5 \times 10^5$ eventos, o $\chi^2$ elevado não indica
+necessariamente um mau ajuste: com estatística muito elevada qualquer desvio
+sistemático pequeno (imperfeições da função de Landau, efeitos de resolução
+do detetor) torna-se detectável e inflaciona o $\chi^2$, mesmo que visualmente
+o ajuste descreva bem o pico e as caudas. Para protões, o $\chi^2$/ndf é
+inferior em valor absoluto mas o ajuste é fisicamente pior: a estrutura de duplo
+pico visível no histograma não é reproduzida por uma função de Landau simples,
+tornando os parâmetros extraídos menos fiáveis, como discutido acima.
+
 \subsubsection{Evolução do MPV ao longo dos detetores}
 
 A Figura~\ref{fig:mpv_vs_det} mostra a evolução do MPV e do $\sigma$ do ajuste
