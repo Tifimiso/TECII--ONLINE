@@ -38,19 +38,46 @@
 %=============================================================================
 
 O projeto AMBER (\textit{Apparatus for Meson and Baryon Experimental Research})
-é um experimento de física hadrónica localizado no Super Proton Synchrotron (SPS)
-do CERN, concebido para estudar a estrutura hadrónica e as interações de partículas
-com alvos fixos~\cite{amber2022}.
+é um experimento de física hadrónica de nova geração localizado no
+\textit{Super Proton Synchrotron} (SPS) do CERN~\cite{amber2022}. O seu
+principal objectivo é investigar a estrutura hadrónica — em particular a
+distribuição de momento dos quarks e gluões dentro do protão e do pião — através
+de colisões com alvos fixos a energias de feixe entre 50 e $\SI{280}{GeV}$.
+O sistema de detetores inclui um alvo activo (AMBER Target) rodeado por detetores
+de silício de alta granularidade, concebidos para registar com precisão os produtos
+das interações hadrônicas.
 
-Este trabalho tem como objetivo simular o detector AMBER Target usando o
-\textit{framework} Geant4 e analisar as distribuições de deposição de energia,
-hits, vértices hadrónicos, distribuição temporal e distribuição do momento das
-partículas produzidas. A simulação permite reproduzir, em ambiente controlado,
-as condições experimentais do feixe de partículas do CERN SPS, validando a
-resposta do detetor e a capacidade de identificação de partículas.
+A simulação de Monte Carlo com o \textit{framework} Geant4~\cite{geant4} é
+indispensável para validar a resposta do detetor antes da tomada de dados real.
+Permite estudar a eficiência de identificação de partículas, estimar fundos
+electromagnéticos e verificar se os algoritmos de reconstrução são capazes de
+separar o sinal de interesse (interações hadrônicas de muões e piões) do fundo
+dominante (electrões e fotões).
 
-A análise foi efectuada com PyROOT sobre quatro ficheiros de dados simulados
-(AmberTarget\_Run\_0 a Run\_3), totalizando $3.3 \times 10^6$ tracks.
+Neste trabalho realizou-se uma simulação completa do AMBER Target em Geant4 e
+procedeu-se à análise estatística dos dados simulados em PyROOT. A análise
+está organizada em cinco componentes complementares, cada uma da responsabilidade
+de um membro do grupo:
+
+\begin{enumerate}
+  \item \textbf{Deposição de energia} — caracterização da resposta energética dos
+    quatro detetores de silício; identificação de espécies por perda de energia
+    (método Bethe-Bloch); análise quantitativa das distribuições de Landau.
+  \item \textbf{Distribuição de hits} — mapeamento espacial (X, Y) dos hits nos
+    detetores; separação entre partículas carregadas e neutras.
+  \item \textbf{Vértices hadrónicos} — localização longitudinal dos vértices de
+    interação primários e secundários ao longo do alvo.
+  \item \textbf{Distribuição temporal} — análise da distribuição dos tempos de
+    chegada dos hits por detetor.
+  \item \textbf{Distribuição do momento} — espectro de momento de muões, piões
+    primários e piões secundários.
+\end{enumerate}
+
+A análise foi efectuada sobre quatro ficheiros ROOT de simulação independentes
+(AmberTarget\_Run\_0 a Run\_3), totalizando $3.31 \times 10^6$ tracks, combinados
+com \texttt{TChain} para maximizar a estatística disponível. Os resultados
+permitem validar a simulação e quantificar a capacidade de identificação de
+partículas do detector AMBER Target.
 
 %=============================================================================
 \section{Dados e Metodologia}
@@ -369,9 +396,121 @@ Os resultados são coerentes com a equação~(\ref{eq:bethe}): o MPV aumenta de
 $1.44~\text{MeV}$ para piões ($m = 139.6~\text{MeV}/c^2$) para $1.88~\text{MeV}$
 para protões ($m = 938.3~\text{MeV}/c^2$), uma diferença de $\sim 31\%$.
 Os kaões ($m = 493.7~\text{MeV}/c^2$, MPV $= 1.46~\text{MeV}$) são intermédios
-mas mais próximos dos piões, o que é consistente com o facto de o regime de
-mínimo de ionização ser atingido a momenta mais elevados para partículas mais
-pesadas — a $p = 0.5~\text{GeV}/c$, os kaões estão menos relativistas que os piões.
+mas mais próximos dos piões. Este comportamento é explicado pelo parâmetro
+$\beta\gamma = p/(mc)$: a $p = 0.5~\text{GeV}/c$, os piões têm $\beta\gamma \approx
+3.6$ (próximo do mínimo de ionização) enquanto os kaões têm $\beta\gamma \approx
+1.0$ (início da subida relativista), depositando portanto mais energia do que
+seria esperado só pela diferença de massa, e aproximando-se do valor dos protões.
+A curva tracejada na Figura~\ref{fig:mpv_massa} corresponde ao ajuste de lei de
+potência $\text{MPV} \propto m^b$ aos três pontos experimentais, confirmando a
+tendência prevista por Bethe-Bloch.
+
+\subsubsection{dE/dx vs momento — bandas de Bethe-Bloch}
+
+A Figura~\ref{fig:dedx_mom} apresenta o valor médio de deposição de energia
+no detetor~0 em função do momento da partícula (escala logarítmica em ambos
+os eixos), para piões, kaões e protões.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{plots/energy/dedx_vs_momentum.png}
+  \caption{Valor médio de $\langle\text{dE/dx}\rangle$ em função do momento
+    para piões, kaões e protões (detetor~0, $E_\text{dep} > \SI{10}{keV}$).
+    As curvas mostram a forma característica de Bethe-Bloch: descida
+    relativista a baixo momento, mínimo de ionização, e convergência das
+    três espécies a alto momento ($p \gtrsim 5~\text{GeV}/c$) quando todas
+    atingem o regime ultrarelativista.}
+  \label{fig:dedx_mom}
+\end{figure}
+
+Este gráfico é o instrumento fundamental de identificação de partículas por
+perda de energia (PID): a diferentes momentos, cada espécie ocupa uma ``banda''
+distinta. A separação é máxima na região de baixo momento ($p < 1~\text{GeV}/c$)
+e diminui progressivamente à medida que as partículas se tornam ultrarelativistas.
+A $p \gtrsim 5~\text{GeV}/c$ as três curvas convergem, tornando a separação por
+dE/dx impraticável sem informação adicional.
+
+\subsubsection{Resolução do detetor e poder de separação entre espécies}
+
+A Figura~\ref{fig:resolucao} apresenta a resolução relativa $\sigma/\text{MPV}$
+do ajuste de Landau em função do número do detetor, para as três espécies hadrónicas.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{plots/energy/resolucao_por_especie.png}
+  \caption{Resolução relativa $\sigma/\text{MPV}$ do fit de Landau em função
+    do número do detetor. Valores mais baixos indicam uma distribuição de
+    deposição de energia mais estreita e, portanto, melhor capacidade de
+    identificação de partículas. Os piões apresentam a melhor resolução
+    ($\sim 5\%$), seguidos dos kaões ($\sim 7\%$); os protões têm resolução
+    mais fraca ($\sim 17\%$) devido à cauda longa da distribuição de Landau
+    para partículas mais pesadas.}
+  \label{fig:resolucao}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{Resolução relativa $\sigma/\text{MPV}$ no detetor~0 para cada espécie.}
+  \label{tab:resolucao}
+  \begin{tabular}{lc}
+    \toprule
+    \textbf{Espécie} & \textbf{$\sigma$/MPV (detetor 0)} \\
+    \midrule
+    $\pi^\pm$ & $5.86\%$ \\
+    $K^\pm$   & $7.18\%$ \\
+    $p$       & $16.96\%$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+O poder de separação entre piões e protões, definido como
+$N_\sigma = |\text{MPV}_p - \text{MPV}_\pi| / \sqrt{\sigma_p^2 + \sigma_\pi^2}$,
+foi calculado para os quatro detetores (Tabela~\ref{tab:separacao}).
+
+\begin{table}[H]
+  \centering
+  \caption{Poder de separação $N_\sigma$ entre piões e protões por detetor.}
+  \label{tab:separacao}
+  \begin{tabular}{cc}
+    \toprule
+    \textbf{Detetor} & \textbf{$N_\sigma$ ($\pi$ vs $p$)} \\
+    \midrule
+    0 & $1.42$ \\
+    1 & $1.32$ \\
+    2 & $1.28$ \\
+    3 & $1.23$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+A separação de $\sim 1.4\sigma$ no detetor~0 é insuficiente para PID eficiente
+com um único detetor (o critério padrão é $> 3\sigma$). No entanto, a combinação
+dos quatro detetores e a informação do gráfico dE/dx vs momento (que mostra
+separação mais pronunciada a baixo momento) permitem melhorar significativamente
+a capacidade de identificação.
+
+\subsubsection{Síntese dos resultados de deposição de energia}
+
+Os resultados desta secção demonstram que a simulação reproduz fielmente os
+processos físicos de interação de partículas carregadas com matéria, validando
+o modelo Geant4 utilizado. Os pontos principais são:
+
+\begin{enumerate}
+  \item O feixe simulado é dominado por fundo electromagnético ($e^\pm$ e $\gamma$,
+    $78\%$), com piões ($15\%$) e protões ($5\%$) como componentes hadrónicas
+    principais. Os muões — sinal de interesse do AMBER — representam apenas $0.2\%$.
+  \item A distribuição de Landau foi ajustada com sucesso para piões, kaões e
+    protões, confirmando que o detetor opera no regime de partícula mínimamente
+    ionizante para piões relativistas.
+  \item O MPV decresce linearmente ao longo dos quatro detetores a
+    $-8~\text{keV/detetor}$ para piões, consistente com perda progressiva de
+    energia prevista por Bethe-Bloch.
+  \item O MPV aumenta com a massa da partícula (pião $\to$ kaão $\to$ protão),
+    confirmando experimentalmente a fórmula de Bethe-Bloch.
+  \item O poder de separação entre piões e protões com um único detetor é de
+    $\sim 1.4\sigma$, insuficiente para PID standalone, mas passível de melhoria
+    com a combinação de múltiplos detetores e informação de momento.
+\end{enumerate}
 
 %-----------------------------------------------------------------------------
 \subsection{Distribuição de Hits}
@@ -401,7 +540,26 @@ pesadas — a $p = 0.5~\text{GeV}/c$, os kaões estão menos relativistas que os
 \section{Conclusão}
 %=============================================================================
 
-% A completar em grupo após integração de todas as secções.
+Este trabalho apresentou a simulação e análise do detector AMBER Target usando
+Geant4 e PyROOT, com dados de quatro runs independentes totalizando
+$3.31 \times 10^6$ tracks.
+
+No que respeita à deposição de energia, os resultados confirmam a validade
+da simulação: as distribuições de Landau são bem reproduzidas para todas as
+espécies hadrónicas, o MPV decresce linearmente ao longo dos detetores de
+forma consistente com a equação de Bethe-Bloch, e a dependência do MPV com
+a massa da partícula ($\pi^\pm \to K^\pm \to p$) está em acordo com as
+previsões teóricas. O gráfico dE/dx vs momento revela a estrutura característica
+das bandas de Bethe-Bloch, com separação máxima a baixo momento e convergência
+a $p \gtrsim 5~\text{GeV}/c$. O poder de separação entre piões e protões com
+um único detetor é de $\sim 1.4\sigma$, o que evidencia a necessidade de
+combinar a informação de múltiplos detetores para PID eficiente.
+
+% [Conclusões das restantes secções a integrar pelos colegas]
+
+Os resultados obtidos validam o modelo de simulação e fornecem uma base
+quantitativa para a optimização do sistema de detetores do experimento AMBER
+no CERN SPS.
 
 %=============================================================================
 \begin{thebibliography}{9}
