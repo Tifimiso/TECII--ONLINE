@@ -165,13 +165,21 @@ distribuídos pelos quatro runs.
 \end{table}
 
 O feixe é dominado por fundo electromagnético: $e^\pm$ e $\gamma$ representam
-conjuntamente $78.2\%$ do total de tracks. Os piões ($15.3\%$) e protões ($5.2\%$)
-constituem as componentes hadrónicas principais. Os piões ($15.3\%$), que constituem o sinal hadrónico primário do experimento
-AMBER para o estudo da estrutura do pião, e os protões ($5.2\%$) são as
-componentes de maior interesse físico. A presença de muões ($0.2\%$) é
-residual e resulta do decaimento de piões em voo ($\pi^\pm \to \mu^\pm + \nu_\mu$).
-A elevada fracção de fundo electromagnético ($78.2\%$) sublinha a importância
-da capacidade de identificação e rejeição de partículas do detetor.
+conjuntamente $78.2\%$ do total de tracks. Os piões ($15.3\%$), que constituem
+o sinal hadrónico primário do experimento AMBER para o estudo da estrutura do
+pião, e os protões ($5.2\%$) são as componentes de maior interesse físico.
+A presença de muões ($0.2\%$) é residual e resulta do decaimento de piões em
+voo ($\pi^\pm \to \mu^\pm + \nu_\mu$).
+
+\textbf{Nota:} a árvore \texttt{tracksData} regista todas as tracks produzidas
+na simulação, incluindo partículas secundárias geradas nas interações dentro
+do alvo, não apenas as partículas do feixe primário. A fracção de $51.3\%$ de
+$e^\pm$ é anomalamente elevada para um feixe hadrónico do SPS e sugere que
+uma parte significativa destas tracks são secundárias de natureza electromagnética
+(produzidas por radiação de bremsstrahlung e criação de pares). A ausência de
+um campo \texttt{IsPrimary} na árvore \texttt{tracksData} impede a separação
+directa entre partículas primárias e secundárias nesta análise, o que constitui
+uma limitação relevante na interpretação da composição do feixe.
 
 \subsubsection{Deposição de energia por detetor}
 
@@ -245,10 +253,13 @@ A Figura~\ref{fig:edep_total} mostra a distribuição da perda de energia total
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.72\textwidth]{plots/energy/edep_total_por_particula.png}
-  \caption{Perda de energia total (soma dos quatro detetores) por espécie de
-    partícula, normalizado a 1. Os protões apresentam uma distribuição alargada
-    e deslocada para energias superiores em relação aos piões, como previsto pela
-    fórmula de Bethe-Bloch para partículas de maior massa.}
+  \caption{Soma da deposição de energia nos detetores atravessados por cada
+    track, por espécie de partícula (normalizado a 1). Nota: tracks que não
+    atravessam todos os detetores contribuem com zero nos detetores não
+    visitados, pelo que este valor representa a deposição nos detetores
+    efectivamente atravessados, não necessariamente nos quatro. Os protões
+    apresentam uma distribuição alargada e deslocada para energias superiores,
+    consistente com maior perda de energia por ionização.}
   \label{fig:edep_total}
 \end{figure}
 
@@ -416,8 +427,11 @@ $\beta\gamma = p/(mc)$: a $p = 0.5~\text{GeV}/c$, os piões têm $\beta\gamma \a
 1.0$ (início da subida relativista), depositando portanto mais energia do que
 seria esperado só pela diferença de massa, e aproximando-se do valor dos protões.
 A curva tracejada na Figura~\ref{fig:mpv_massa} corresponde ao ajuste de lei de
-potência $\text{MPV} \propto m^b$ aos três pontos experimentais, confirmando a
-tendência prevista por Bethe-Bloch.
+potência $\text{MPV} \propto m^b$ aos três pontos experimentais, ilustrando a
+tendência crescente prevista por Bethe-Bloch. Note-se que com apenas três pontos
+e dois parâmetros livres o ajuste tem um único grau de liberdade, pelo que não
+constitui uma confirmação estatística robusta — serve apenas como guia visual
+da dependência em massa.
 
 \subsubsection{dE/dx vs momento — bandas de Bethe-Bloch}
 
