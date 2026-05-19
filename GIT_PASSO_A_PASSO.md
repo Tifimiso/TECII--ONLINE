@@ -124,11 +124,11 @@ Quando tiveres tudo feito e quereres juntar o teu trabalho ao `main`:
 6. Escreve um título e uma descrição do que fizeste
 7. Clica em **"Create pull request"** novamente
 
-Depois avisa no grupo para alguém fazer o merge.
+Depois avisa no grupo para alguém fazer o merge, (ou faz tu se confirmares que esta bem feito)
 
 ---
 
-## Resumo rápido do dia-a-dia
+## Resumo rápido
 
 ```bash
 git branch                        # verificar em que branch estás
@@ -140,7 +140,5 @@ git push origin NomeAqui          # enviar para o GitHub
 ```
 
 ---
-
-## Dúvidas?
 
 Qualquer problema que tenham com o git ou com o código, falem no grupo. Estou disponível para ajudar.

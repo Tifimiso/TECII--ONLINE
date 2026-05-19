@@ -27,6 +27,12 @@ projeto/
 │   ├── report.tex               # Fonte LaTeX do relatório
 │   └── report.pdf               # Relatório compilado (gerado a partir do .tex — não versionado)
 │
+├── macros/                      # Macros ROOT em C++ (análise exploratória e referência)
+│   ├── primeiroHistograma.C     # Histograma simples de deposição de energia (1 detetor)
+│   ├── primeiroArrayHistograma.C# Histogramas para os 4 detetores em loop
+│   ├── fitLandau.C              # Ajuste Landau à distribuição de energia de piões
+│   └── c1.C                     # Canvas gerado automaticamente pelo ROOT (referência)
+│
 ├── requirements.txt             # Dependências Python (numpy, matplotlib, uproot, etc.)
 ├── STRUCTURE.md                 # Este ficheiro — descrição da estrutura do repositório
 └── README.md                    # Descrição geral do projeto e instruções de uso
@@ -58,6 +64,13 @@ Estes ficheiros **não são versionados** (são gerados pelos scripts, não deve
 ### `report/`
 Relatório final em LaTeX. O ficheiro `report.pdf` é gerado ao compilar o `report.tex`
 e **não é versionado**.
+
+### `macros/`
+Macros ROOT em C++ usados para análise exploratória e como referência para os scripts Python:
+- **primeiroHistograma.C** — histograma de deposição de energia para o detector 0 (ponto de partida).
+- **primeiroArrayHistograma.C** — loop sobre os 4 detetores, gerando um histograma por cada um.
+- **fitLandau.C** — ajuste de uma distribuição de Landau à energia depositada por piões (filtro por PDG e momento).
+- **c1.C** — canvas gerado automaticamente pelo ROOT com o resultado do fit Landau (referência visual).
 
 ### `requirements.txt`
 Lista de dependências Python necessárias para correr os scripts de análise.
