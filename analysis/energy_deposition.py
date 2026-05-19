@@ -373,10 +373,47 @@ def plot_mpv_vs_detector():
     canvas.SaveAs("{}/mpv_vs_detector.png".format(OUTPUT_DIR))
     canvas.Close()
 
+    # --- grafico de sigma vs detetor ---
+    grafSigma = ROOT.TGraphErrors(n)
+    for i in range(n):
+        grafSigma.SetPoint(i, i, sigma_values[i])
+        grafSigma.SetPointError(i, 0.0, sigma_errors[i])
+
+    canvasSigma = ROOT.TCanvas("c_sigma", "", 800, 600)
+    canvasSigma.SetGrid()
+
+    grafSigma.SetTitle("Sigma do fit Landau por detetor (pioes, p > 0.5 GeV/c);Numero do detetor;Sigma (MeV)")
+    grafSigma.SetMarkerStyle(21)
+    grafSigma.SetMarkerSize(1.5)
+    grafSigma.SetMarkerColor(ROOT.kGreen + 2)
+    grafSigma.SetLineColor(ROOT.kGreen + 2)
+    grafSigma.SetLineWidth(2)
+
+    ajusteSigma = ROOT.TF1("ajusteSigma", "pol1", -0.5, 3.5)
+    ajusteSigma.SetLineColor(ROOT.kBlue + 1)
+    ajusteSigma.SetLineWidth(2)
+    ajusteSigma.SetLineStyle(2)
+    grafSigma.Fit(ajusteSigma, "Q")
+
+    ROOT.gStyle.SetOptFit(1)
+    grafSigma.Draw("AP")
+    ajusteSigma.Draw("SAME")
+
+    grafSigma.GetXaxis().SetLimits(-0.5, 3.5)
+    grafSigma.GetXaxis().SetNdivisions(4)
+    grafSigma.GetYaxis().SetTitleOffset(1.3)
+
+    canvasSigma.SaveAs("{}/sigma_vs_detector.png".format(OUTPUT_DIR))
+    canvasSigma.Close()
+
+    ROOT.gStyle.SetOptFit(0)
     print("[OK] plot_mpv_vs_detector")
     for i in range(n):
-        print("  Detetor {}: MPV = {:.4f} +/- {:.4f} MeV".format(i, mpv_values[i], mpv_errors[i]))
-    print("  Declive: {:.4f} +/- {:.4f} MeV/detetor".format(declive, declive_err))
+        print("  Detetor {}: MPV = {:.4f} +/- {:.4f} MeV | Sigma = {:.4f} +/- {:.4f} MeV".format(
+            i, mpv_values[i], mpv_errors[i], sigma_values[i], sigma_errors[i]))
+    print("  Declive MPV:   {:.4f} +/- {:.4f} MeV/detetor".format(declive, declive_err))
+    print("  Declive Sigma: {:.4f} +/- {:.4f} MeV/detetor".format(
+        ajusteSigma.GetParameter(1), ajusteSigma.GetParError(1)))
 
 
 def plot_detectors_overlay():
