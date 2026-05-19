@@ -618,6 +618,95 @@ def plot_landau_fit_kaons():
     print("[OK] plot_landau_fit_kaons")
 
 
+def plot_mpv_vs_mass():
+    """
+    MPV do fit Landau em funcao da massa da particula (piao, kaon, protao).
+    Confirmacao directa da formula de Bethe-Bloch: partículas mais pesadas
+    depositam mais energia (MPV mais alto). Usa os valores do detetor 0.
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    KEV_TO_MEV = 1e-3
+
+    dados = carregar_chain("tracksData")
+
+    # (nome, massa em MeV/c^2, selecao PDG, range fit, cor)
+    especies = [
+        ("Piao",   139.6,  "(particlePDG==211 || particlePDG==-211)", (0.3, 5.0),  ROOT.kRed+1),
+        ("Kaon",   493.7,  "(particlePDG==321 || particlePDG==-321)", (0.5, 8.0),  ROOT.kCyan+1),
+        ("Protao", 938.3,  "particlePDG==2212",                       (1.0, 15.0), ROOT.kMagenta+1),
+    ]
+
+    massas   = []
+    mpv_vals = []
+    mpv_errs = []
+    nomes    = []
+    cores    = []
+
+    nBins  = 300
+    minBin = 0.0
+
+    for nome, massa, selecaoPDG, fitRange, cor in especies:
+        branchName = "EdepDet0_keV"
+        exprMeV    = "{}*{}".format(branchName, KEV_TO_MEV)
+        selecao    = "{} && {}>10 && momentum_GeV>0.5".format(selecaoPDG, branchName)
+        maxBin     = fitRange[1] * 2.5
+
+        histoName = "hMass_{}".format(nome)
+        histo = ROOT.TH1D(histoName, "", nBins, minBin, maxBin)
+        dados.Draw("{}>>{}".format(exprMeV, histoName), selecao, "goff")
+
+        landauFit = ROOT.TF1("landauMass_{}".format(nome), "landau", fitRange[0], fitRange[1])
+        histo.Fit(landauFit, "RQ0")
+
+        massas.append(massa)
+        mpv_vals.append(landauFit.GetParameter(1))
+        mpv_errs.append(landauFit.GetParError(1))
+        nomes.append(nome)
+        cores.append(cor)
+
+    canvas = ROOT.TCanvas("c_mpv_mass", "", 800, 600)
+    canvas.SetGrid()
+
+    graf = ROOT.TGraphErrors(len(massas))
+    for i in range(len(massas)):
+        graf.SetPoint(i, massas[i], mpv_vals[i])
+        graf.SetPointError(i, 0.0, mpv_errs[i])
+
+    graf.SetTitle("MPV do fit Landau vs massa da particula (detetor 0);Massa (MeV/c^{2});MPV (MeV)")
+    graf.SetMarkerStyle(21)
+    graf.SetMarkerSize(1.8)
+    graf.SetMarkerColor(ROOT.kBlack)
+    graf.SetLineColor(ROOT.kBlack)
+    graf.SetLineWidth(2)
+
+    graf.Draw("AP")
+    graf.GetXaxis().SetLimits(0, 1100)
+    graf.SetMinimum(1.3)
+    graf.SetMaximum(2.1)
+
+    # adicionar etiquetas com o nome de cada ponto
+    labels = []
+    offsets = [(30, 0.04), (30, 0.04), (30, 0.04)]
+    for i, (nome, massa, mpv) in enumerate(zip(nomes, massas, mpv_vals)):
+        dx, dy = offsets[i]
+        lbl = ROOT.TLatex(massa + dx, mpv + dy, nome)
+        lbl.SetTextSize(0.04)
+        lbl.Draw()
+        labels.append(lbl)
+
+    ROOT.gStyle.SetOptStat(0)
+    ROOT.gStyle.SetOptFit(0)
+    canvas.SaveAs("{}/mpv_vs_massa.png".format(OUTPUT_DIR))
+    canvas.Close()
+
+    ROOT.gStyle.SetOptStat(1)
+    print("[OK] plot_mpv_vs_mass")
+    for nome, massa, mpv, err in zip(nomes, massas, mpv_vals, mpv_errs):
+        print("  {:8s} ({:.1f} MeV/c^2): MPV = {:.4f} +/- {:.4f} MeV".format(
+            nome, massa, mpv, err))
+
+
 def plot_mpv_pioes_vs_protoes():
     """
     Comparacao do MPV do fit Landau entre pioes e protoes em funcao do detetor.
@@ -776,5 +865,6 @@ if __name__ == "__main__":
     plot_mpv_vs_detector()
     plot_landau_fit_protons()
     plot_landau_fit_kaons()
+    plot_mpv_vs_mass()
     plot_mpv_pioes_vs_protoes()
     plot_detectors_overlay()
