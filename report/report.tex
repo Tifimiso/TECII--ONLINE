@@ -339,9 +339,16 @@ de Landau em função do número do detetor, com ajuste linear sobreposto.
 
 O MPV diminui $\SI{8}{keV}$ por detetor, o que é consistente com a perda
 progressiva de energia prevista pela equação de Bethe-Bloch para partículas
-que atravessam matéria. A diminuição do $\sigma$ indica que a distribuição
-de deposição de energia se torna mais estreita ao longo do trajecto, reflectindo
-a maior homogeneidade energética das partículas após travessia de cada detetor.
+que atravessam matéria. A diminuição do $\sigma$ ao longo dos detetores
+(Tabela~\ref{tab:mpv_vs_det}) é, à primeira vista, contra-intuitiva: seria
+de esperar que partículas que perdem energia progressivamente tivessem
+\textit{maior} flutuação estatística (\textit{straggling}), não menor.
+Uma explicação mais plausível é um efeito de selecção cinemática: as partículas
+de menor momento (que depositam mais energia e alargam a distribuição) têm
+maior probabilidade de ser absorvidas ou deflectidas antes de atingir os
+detetores mais afastados, resultando numa população mais homogénea nos
+detetores 2 e 3. Esta hipótese não foi verificada quantitativamente no
+âmbito deste trabalho e constitui uma limitação da análise.
 
 A Figura~\ref{fig:mpv_compare} apresenta a comparação entre piões e protões
 nos quatro detetores, evidenciando a diferença de escala de deposição de
@@ -430,6 +437,15 @@ e diminui progressivamente à medida que as partículas se tornam ultrarelativis
 A $p \gtrsim 5~\text{GeV}/c$ as três curvas convergem, tornando a separação por
 dE/dx impraticável sem informação adicional.
 
+\textbf{Nota metodológica:} o gráfico usa a média aritmética
+$\langle\text{dE/dx}\rangle$ (calculada com \texttt{TProfile}), que é
+fortemente influenciada pela cauda direita da distribuição de Landau.
+A fórmula de Bethe-Bloch prevê rigorosamente o \textit{most probable value}
+(MPV), não a média. Para uma comparação quantitativa com a teoria seria
+necessário calcular o MPV em cada bin de momento através de ajustes de Landau
+individuais. Para os fins qualitativos deste trabalho — identificar as bandas
+características e verificar a convergência a alto momento — a média é suficiente.
+
 \subsubsection{Resolução do detetor e poder de separação entre espécies}
 
 A Figura~\ref{fig:resolucao} apresenta a resolução relativa $\sigma/\text{MPV}$
@@ -488,6 +504,18 @@ com um único detetor (o critério padrão é $> 3\sigma$). No entanto, a combin
 dos quatro detetores e a informação do gráfico dE/dx vs momento (que mostra
 separação mais pronunciada a baixo momento) permitem melhorar significativamente
 a capacidade de identificação.
+
+\textbf{Limitação do corte de momento para protões:} o filtro $p > 0.5~\text{GeV}/c$
+foi escolhido para seleccionar partículas relativistas. Para piões
+($m = 140~\text{MeV}/c^2$) este corte corresponde a $\beta\gamma \approx 3.6$,
+próximo do mínimo de ionização — o filtro é adequado. Para protões
+($m = 938~\text{MeV}/c^2$), o mesmo corte corresponde a $\beta\gamma \approx 0.53$,
+uma região onde a perda de energia é ainda fortemente dependente de $\beta$ e
+a distribuição de Landau é mais larga e assimétrica. Isto explica parcialmente
+o $\sigma$ elevado dos protões ($0.324~\text{MeV}$) e poderá estar a subestimar
+o poder de separação real que seria obtido com protões verdadeiramente relativistas
+($p > 2~\text{GeV}/c$, $\beta\gamma > 2$). Esta é uma limitação metodológica
+identificada na análise.
 
 \subsubsection{Síntese dos resultados de deposição de energia}
 
