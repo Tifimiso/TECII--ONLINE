@@ -416,6 +416,66 @@ def plot_mpv_vs_detector():
         ajusteSigma.GetParameter(1), ajusteSigma.GetParError(1)))
 
 
+def plot_landau_fit_protons():
+    """
+    Ajuste de uma distribuicao de Landau a deposicao de energia de protoes em cada detetor.
+    Filtros: momentum_GeV > 0.5 (protoes relativistas) e EdepDet > 10 keV.
+    Comparacao com o MPV dos pioes mostra a diferenca de perda de energia
+    entre particulas de massas distintas (Bethe-Bloch: dE/dx depende de massa e carga).
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    KEV_TO_MEV = 1e-3
+
+    dados = carregar_chain("tracksData")
+
+    nBins = 300
+    minBin = 0.0
+    maxBin = 20.0  # MeV — protoes depositam muito mais energia que pioes
+
+    ROOT.gStyle.SetOptStat(0)
+    ROOT.gStyle.SetOptFit(1)
+
+    for i in range(4):
+        branchName = "EdepDet{}_keV".format(i)
+        exprMeV    = "{}*{}".format(branchName, KEV_TO_MEV)
+        selecao    = "particlePDG==2212 && {}>10 && momentum_GeV>0.5".format(branchName)
+
+        canvas   = ROOT.TCanvas("c_landau_p_{}".format(i), "", 800, 600)
+        histoName = "hLandauP_det{}".format(i)
+
+        histo = ROOT.TH1D(histoName,
+                          "Deposicao de energia de protoes - Detetor {} (fit Landau);Energia (MeV);Contagens".format(i),
+                          nBins, minBin, maxBin)
+
+        dados.Draw("{}>>{}".format(exprMeV, histoName), selecao, "goff")
+
+        histo.SetLineColor(ROOT.kMagenta + 1)
+        histo.SetFillColor(ROOT.kMagenta - 9)
+        histo.SetLineWidth(1)
+
+        landauFit = ROOT.TF1("landauFitP_{}".format(i), "landau", 1.0, 15.0)
+        landauFit.SetLineColor(ROOT.kBlack)
+        landauFit.SetLineWidth(2)
+        histo.Fit(landauFit, "RQ")
+
+        mpv   = landauFit.GetParameter(1)
+        sigma = landauFit.GetParameter(2)
+
+        histo.Draw("HIST")
+        landauFit.Draw("SAME")
+
+        canvas.SaveAs("{}/landau_protoes_detector{}.png".format(OUTPUT_DIR, i))
+        canvas.Close()
+
+        print("  Detetor {}: MPV = {:.3f} +/- {:.3f} MeV | Sigma = {:.3f} +/- {:.3f} MeV".format(
+            i, mpv, landauFit.GetParError(1), sigma, landauFit.GetParError(2)))
+
+    ROOT.gStyle.SetOptStat(1)
+    ROOT.gStyle.SetOptFit(0)
+    print("[OK] plot_landau_fit_protons")
+
+
 def plot_detectors_overlay():
     """
     Sobreposicao dos histogramas de deposicao de energia dos 4 detetores num so grafico.
@@ -479,4 +539,5 @@ if __name__ == "__main__":
     plot_total_energy_loss_per_particle()
     plot_landau_fit_per_detector()
     plot_mpv_vs_detector()
+    plot_landau_fit_protons()
     plot_detectors_overlay()
