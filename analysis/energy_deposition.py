@@ -476,6 +476,98 @@ def plot_landau_fit_protons():
     print("[OK] plot_landau_fit_protons")
 
 
+def plot_mpv_pioes_vs_protoes():
+    """
+    Comparacao do MPV do fit Landau entre pioes e protoes em funcao do detetor.
+    Mostra a diferenca de perda de energia entre as duas especies num unico grafico,
+    evidenciando a dependencia em massa prevista pela formula de Bethe-Bloch.
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    KEV_TO_MEV = 1e-3
+
+    dados = carregar_chain("tracksData")
+
+    nBins  = 300
+    minBin = 0.0
+
+    particulas = [
+        ("Pioes",   ROOT.kRed+1,     ROOT.kRed+1,     "(particlePDG==211 || particlePDG==-211)", 8.0,  21),
+        ("Protoes", ROOT.kMagenta+1, ROOT.kMagenta+1, "particlePDG==2212",                       20.0, 22),
+    ]
+
+    canvas = ROOT.TCanvas("c_mpv_compare", "", 800, 600)
+    canvas.SetGrid()
+
+    legenda = ROOT.TLegend(0.65, 0.72, 0.88, 0.88)
+    legenda.SetBorderSize(1)
+
+    # primeiro recolher todos os MPV (sem desenhar nada)
+    graficos = []
+    for nome, corM, corL, selecaoPDG, maxBin, marcador in particulas:
+        mpv_vals = []
+        mpv_errs = []
+
+        for i in range(4):
+            branchName = "EdepDet{}_keV".format(i)
+            exprMeV    = "{}*{}".format(branchName, KEV_TO_MEV)
+            selecao    = "{} && {}>10 && momentum_GeV>0.5".format(selecaoPDG, branchName)
+
+            histoName = "hCmp_{}_{}".format(nome, i)
+            histo = ROOT.TH1D(histoName, "", nBins, minBin, maxBin)
+            dados.Draw("{}>>{}".format(exprMeV, histoName), selecao, "goff")  # goff = sem desenhar
+
+            landauFit = ROOT.TF1("landauCmp_{}_{}".format(nome, i), "landau", 0.3, maxBin * 0.7)
+            histo.Fit(landauFit, "RQ0")  # 0 = nao desenhar o fit
+
+            mpv_vals.append(landauFit.GetParameter(1))
+            mpv_errs.append(landauFit.GetParError(1))
+
+        graf = ROOT.TGraphErrors(4)
+        for i in range(4):
+            graf.SetPoint(i, i, mpv_vals[i])
+            graf.SetPointError(i, 0.0, mpv_errs[i])
+
+        graf.SetMarkerStyle(marcador)
+        graf.SetMarkerSize(1.5)
+        graf.SetMarkerColor(corM)
+        graf.SetLineColor(corL)
+        graf.SetLineWidth(2)
+
+        ajuste = ROOT.TF1("ajuste_{}".format(nome), "pol1", -0.5, 3.5)
+        ajuste.SetLineColor(corL)
+        ajuste.SetLineWidth(1)
+        ajuste.SetLineStyle(2)
+        graf.Fit(ajuste, "RQ")
+
+        legenda.AddEntry(graf, nome, "p")
+        graficos.append((graf, ajuste))
+
+    # agora desenhar tudo no canvas limpo
+    canvas.cd()
+    for k, (graf, ajuste) in enumerate(graficos):
+        opcao = "AP" if k == 0 else "P SAME"
+        graf.Draw(opcao)
+        ajuste.Draw("SAME")
+
+    graficos[0][0].SetTitle("MPV do fit Landau — pioes vs protoes;Numero do detetor;MPV (MeV)")
+    graficos[0][0].GetXaxis().SetLimits(-0.5, 3.5)
+    graficos[0][0].GetXaxis().SetNdivisions(4)
+    graficos[0][0].GetYaxis().SetTitleOffset(1.3)
+    # ajustar eixo Y para incluir ambas as especies
+    graficos[0][0].SetMinimum(1.2)
+    graficos[0][0].SetMaximum(2.1)
+
+    ROOT.gStyle.SetOptFit(0)
+    ROOT.gStyle.SetOptStat(0)
+    legenda.Draw()
+    canvas.SaveAs("{}/mpv_pioes_vs_protoes.png".format(OUTPUT_DIR))
+    canvas.Close()
+
+    ROOT.gStyle.SetOptStat(1)
+    print("[OK] plot_mpv_pioes_vs_protoes")
+
+
 def plot_detectors_overlay():
     """
     Sobreposicao dos histogramas de deposicao de energia dos 4 detetores num so grafico.
@@ -540,4 +632,5 @@ if __name__ == "__main__":
     plot_landau_fit_per_detector()
     plot_mpv_vs_detector()
     plot_landau_fit_protons()
+    plot_mpv_pioes_vs_protoes()
     plot_detectors_overlay()
