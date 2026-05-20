@@ -37,7 +37,8 @@ Este trabalho apresenta a simulação e análise do detector AMBER Target
 sobre quatro ficheiros ROOT totalizando $3.31 \times 10^6$ \textit{tracks}.
 O trabalho está organizado em cinco componentes complementares:
 (1)~\textbf{deposição de energia} — ajuste de distribuições de Landau para
-piões, kaões e protões, validação da fórmula de Bethe-Bloch e classificador
+piões, kaões e protões, verificação da compatibilidade com a fórmula de
+Bethe-Bloch e classificador
 de aprendizagem automática ($\text{AUC} = 0.975$, \textit{balanced accuracy}
 $= 92.8\%$ no domínio $p \in [0.5, 2.0]~\text{GeV}/c$);
 (2)~\textbf{distribuição de \textit{hits}} — mapeamento espacial dos hits por
@@ -347,6 +348,17 @@ eventos — com estatística tão elevada qualquer imperfeição sistemática in
 o $\chi^2$ mesmo que o ajuste descreva bem o pico. Para os protões, o ajuste é
 fisicamente menos adequado devido à estrutura de duplo pico discutida acima.
 
+\textbf{Nota metodológica:} nesta análise utilizou-se uma Landau pura como
+função de ajuste, o que constitui uma aproximação reconhecida. Numa análise mais
+refinada, utilizaria-se a convolução de uma distribuição de Landau com uma
+Gaussiana (\textit{Landau}$\otimes$\textit{Gauss}), que modela simultaneamente
+a flutuação estatística de ionização e a resolução instrumental do detetor
+(ruído de leitura, difusão de portadores). Esta convolução é o estimador
+padrão em TPCs~\cite{bichsel2006}. Para os fins desta análise comparativa —
+em particular para piões, cujo perfil segue bem uma Landau pura neste regime
+de espessura — a aproximação é adequada, mas os valores de $\sigma$ extraídos
+poderão estar ligeiramente sobrestimados.
+
 A Figura~\ref{fig:landau_overlay} apresenta as três distribuições sobrepostas
 num único gráfico, normalizadas ao pico de cada espécie, permitindo uma
 comparação directa das formas e posições dos picos.
@@ -462,8 +474,8 @@ função da massa da partícula, usando o detetor~0 como referência.
   \centering
   \includegraphics[width=0.72\textwidth]{plots/energy/mpv_vs_massa.png}
   \caption{MPV do fit de Landau em função da massa da partícula (detetor~0,
-    $p > 0.5~\text{GeV}/c$). O crescimento do MPV com a massa confirma
-    experimentalmente a dependência prevista pela fórmula de Bethe-Bloch:
+    $p > 0.5~\text{GeV}/c$). O crescimento do MPV com a massa é consistente
+    com a dependência prevista pela fórmula de Bethe-Bloch nos dados simulados:
     partículas mais pesadas, com menor $\beta$ para o mesmo intervalo de momento,
     depositam mais energia por unidade de comprimento.}
   \label{fig:mpv_massa}
@@ -478,7 +490,7 @@ $\beta\gamma = p/(mc)$: a $p = 0.5~\text{GeV}/c$, os piões têm $\beta\gamma \a
 3.6$ (próximo do mínimo de ionização) enquanto os kaões têm $\beta\gamma \approx
 1.0$ (início da subida relativista), depositando portanto mais energia do que
 seria esperado só pela diferença de massa, e aproximando-se do valor dos protões.
-Os três pontos experimentais na Figura~\ref{fig:mpv_massa} mostram uma tendência
+Os três pontos simulados na Figura~\ref{fig:mpv_massa} mostram uma tendência
 crescente do MPV com a massa da partícula, consistente com a fórmula de
 Bethe-Bloch: partículas mais pesadas têm menor $\beta$ para o mesmo momento e,
 portanto, maior $1/\beta^2$ e maior perda de energia. Dado o número reduzido de
@@ -519,7 +531,7 @@ para comparação quantitativa com Bethe-Bloch — é apresentada na
 secção~\ref{sec:dedx_mpv}.
 
 \textbf{Comparação com a previsão teórica de Bethe-Bloch:}
-a Figura~\ref{fig:dedx_bb} sobrepõe os dados experimentais com as curvas
+a Figura~\ref{fig:dedx_bb} sobrepõe os dados simulados com as curvas
 teóricas de Bethe-Bloch calculadas para silício ($Z = 14$, $A = 28.09~\text{g/mol}$,
 $I = 173~\text{eV}$, $\rho = 2.329~\text{g/cm}^3$, PDG 2022~\cite{pdg2022}),
 sem correcção de densidade (válida para $p \lesssim 10~\text{GeV}/c$ neste detector).
@@ -539,8 +551,22 @@ sem correcção de densidade (válida para $p \lesssim 10~\text{GeV}/c$ neste de
 \end{figure}
 
 A espessura efectiva inferida do detetor é $4.7~\text{mm}$, valor consistente
-com a geometria de um alvo activo espesso do AMBER Target. O acordo entre dados
-e curvas teóricas é satisfatório na região de baixo e médio momento, onde as
+com a geometria de um alvo activo espesso do AMBER Target. Esta estimativa foi
+obtida dividindo o MPV observado dos piões no mínimo de ionização
+($\beta\gamma \approx 3.5$, $p \approx 0.55~\text{GeV}/c$,
+$\text{MPV}_\text{MIP} \approx 1.54~\text{MeV}$) pelo valor de
+$\langle\text{dE/dx}\rangle_\text{MIP}$ calculado pela fórmula de Bethe-Bloch
+para silício com os parâmetros do PDG~\cite{pdg2022}
+($\rho = 2.329~\text{g/cm}^3$, $I = \SI{173}{eV}$):
+$x_\text{eff} = \text{MPV}_\text{MIP}\, /\, (\langle\text{dE/dx}\rangle_\text{MIP} \cdot \rho)$.
+Esta inferência é aproximada: assume geometria uniforme e que a Geant4 reproduz
+fielmente o valor absoluto de dE/dx no mínimo; a espessura real do detetor
+deveria ser confirmada através dos ficheiros de configuração da simulação.
+Note-se ainda que este procedimento é parcialmente circular — a mesma curva de
+Bethe-Bloch é usada tanto para inferir a espessura como para verificar o acordo
+— pelo que o resultado demonstra a consistência interna do pipeline de análise,
+não uma validação independente da teoria.
+O acordo entre dados e curvas teóricas é satisfatório na região de baixo e médio momento, onde as
 bandas das três espécies estão bem separadas. A divergência a $p \gtrsim 5~\text{GeV}/c$
 é esperada: a fórmula básica de Bethe-Bloch não inclui a correcção de densidade
 de Sternheimer~\cite{sternheimer1971}, que suprime o aumento relativista (platô
@@ -558,7 +584,7 @@ prevê o valor mais provável de energia depositada, não a média.
 Para uma comparação quantitativa rigorosa com a teoria, ajusta-se uma
 distribuição de Landau em cada bin de momento (18 bins logarítmicos entre
 $0.3$ e $10~\text{GeV}/c$) e extrai-se o MPV e a sua incerteza do ajuste.
-A Figura~\ref{fig:dedx_mpv} apresenta estes pontos experimentais sobrepostos
+A Figura~\ref{fig:dedx_mpv} apresenta estes pontos simulados sobrepostos
 com as curvas de Bethe-Bloch teóricas, usando os mesmos parâmetros do silício
 e a mesma espessura efectiva de $4.7~\text{mm}$.
 
@@ -567,7 +593,7 @@ e a mesma espessura efectiva de $4.7~\text{mm}$.
   \includegraphics[width=0.82\textwidth]{plots/energy/dedx_mpv_vs_momentum.png}
   \caption{MPV do fit de Landau vs momento para piões (18 bins), kaões (17 bins)
     e protões (18 bins). As linhas tracejadas são as curvas de Bethe-Bloch
-    teóricas para silício. Os pontos experimentais seguem o comportamento
+    teóricas para silício. Os pontos simulados reproduzem o comportamento
     $1/\beta^2$ previsto pela teoria — queda a baixo momento, mínimo de
     ionização em $\beta\gamma \approx 3$--$4$, e ligeiro aumento relativista
     a alto momento. O acordo quantitativo é melhor do que na
@@ -711,10 +737,13 @@ combinado (Figura~\ref{fig:consistencia_runs}).
 Os runs 1, 2 e 3 são mutuamente consistentes ($\lesssim 3\sigma$ do valor
 combinado), o que valida a reprodutibilidade da simulação. O Run~0, porém,
 apresenta um MPV significativamente superior ($+8.5\sigma$, $+\SI{13}{keV}$),
-o que não é atribuível a flutuação estatística. Uma possível explicação é uma
-diferença nas condições iniciais da simulação (semente do gerador de números
-aleatórios, configuração de campo, ou estado inicial do gerador de partículas
-primárias) que resulta numa população de piões ligeiramente diferente nesse run.
+o que não é atribuível a flutuação estatística. A origem deste desvio não é
+determinável sem inspecção adicional dos ficheiros de configuração da simulação;
+possíveis causas incluem diferenças na semente do gerador de números aleatórios,
+na configuração do campo electromagnético, nas condições iniciais do gerador de
+partículas primárias, ou outro efeito sistemático não identificado. Qualquer
+destas hipóteses exigiria acesso à configuração interna da simulação Geant4
+para ser confirmada ou excluída --- o que está fora do âmbito desta análise.
 Este resultado demonstra a importância de verificar a consistência entre runs
 antes de combinar os dados, uma prática padrão em física experimental.
 
@@ -810,14 +839,15 @@ antes de combinar os dados, uma prática padrão em física experimental.
 
 Complementarmente à análise baseada na fórmula de Bethe-Bloch, implementou-se
 um classificador de aprendizagem automática (\textit{machine learning}) para
-identificação de partículas. A metodologia seguiu os princípios dos sistemas de
-PID por ML em operação no CERN: o \textbf{LHCb ProbNN}~\cite{lhcb_pid}, que
-usa \textit{Gradient Boosted Decision Trees} combinando quatro sub-detectores
-(em produção desde 2011, processando dezenas de milhões de eventos por segundo),
-e o sistema de redes neuronais do \textbf{ALICE TPC}~\cite{alice_pid}, que
-separa $\pi/K/p$ por dE/dx no gás — exactamente o mesmo problema físico que
-aqui se aborda. O \textit{framework} TMVA do ROOT, amplamente usado em HEP,
-usa a mesma arquitectura BDT implementada neste trabalho via \texttt{sklearn}.
+identificação de partículas. A metodologia é conceptualmente relacionada com
+abordagens usadas em experimentos do CERN: o sistema \textbf{ProbNN} do
+LHCb~\cite{lhcb_pid} usa \textit{Gradient Boosted Decision Trees} combinando
+múltiplos sub-detectores, e o \textbf{ALICE TPC}~\cite{alice_pid} usa redes
+neuronais para separar $\pi/K/p$ por dE/dx no gás --- o mesmo problema físico
+fundamental, embora em detetor de gás com muito maior estatística e
+sub-detectores adicionais que aqui não estão disponíveis. O \textit{framework}
+TMVA do ROOT usa arquitecturas BDT similares às implementadas via
+\texttt{sklearn} neste trabalho.
 
 A abordagem escolhida foi um \textit{Histogram-based Gradient Boosting
 Classifier}~\cite{sklearn}, variante moderna e eficiente do Gradient Boosting
@@ -936,12 +966,21 @@ de impureza, pois reflecte o impacto real no desempenho do modelo.
   \label{fig:ml_features}
 \end{figure}
 
-O momento $p$ é a variável dominante, o que é fisicamente esperado: é a
-variável que entra directamente no parâmetro $\beta\gamma$ da equação de
-Bethe-Bloch, determinando a posição na curva de dE/dx. A deposição no
-detetor~0 ocupa o segundo lugar; os detetores 1--3 têm importância decrescente
-mas positiva, confirmando que a combinação de vários detetores melhora a
-separação relativamente a um único detetor.
+O momento $p$ é a variável dominante, o que tem duas componentes físicas
+distintas: por um lado, é a variável que entra directamente no parâmetro
+$\beta\gamma = p/(mc)$ da equação de Bethe-Bloch, determinando a posição de
+cada espécie na curva de dE/dx; por outro lado, em dados simulados, a
+distribuição de momento difere entre espécies por razões cinemáticas (piões
+são maioritariamente o feixe primário, com espectro de alto momento; protões
+são secundários de interações hadrónicas, com maior abundância a baixo momento).
+O modelo pode explorar ambas as contribuições, pelo que a dominância do momento
+não reflete exclusivamente a física de dE/dx.
+É por esta razão que a análise por bins de momento sem o uso do momento como
+variável (Secção~\ref{sec:pid_ml}, AUC vs.\ momento) é o teste fisicamente
+mais rigoroso da separação genuinamente baseada em deposição de energia.
+A deposição no detetor~0 ocupa o segundo lugar; os detetores 1--3 têm
+importância decrescente mas positiva, confirmando que a combinação de vários
+detetores melhora a separação relativamente a um único detetor.
 
 \subsubsection{Fronteira de decisão}
 
@@ -1255,24 +1294,19 @@ domínio restrito $p \in [0.5, 2.0]~\text{GeV}/c$.
 
 \subsubsection{Contexto: sistemas equivalentes em operação}
 
-O classificador desenvolvido neste trabalho implementa, a escala educacional,
-o mesmo princípio dos sistemas de PID por aprendizagem automática em uso em
-experimentos do CERN. O mais próximo é o sistema \textbf{ProbNN} do
-experimento LHCb~\cite{lhcb_pid}, em produção desde 2011, que combina
-informação de quatro sub-detectores (RICH, calorímetros, sistema de muões e
-TPC) num único classificador de \textit{Gradient Boosted Decision Trees} ---
-arquitectura idêntica à utilizada neste trabalho. O LHCb processa dezenas de
-milhões de colisões por segundo em tempo real com este sistema.
+Para contextualizar a abordagem adoptada, é útil referir sistemas de PID
+por aprendizagem automática em uso em experimentos do CERN que usam princípios
+semelhantes. O sistema \textbf{ProbNN} do LHCb~\cite{lhcb_pid} combina
+informação de múltiplos sub-detectores (RICH, calorímetros, sistema de muões e
+TPC) num classificador de \textit{Gradient Boosted Decision Trees}, arquitectura
+similar à utilizada neste trabalho, embora em escala e complexidade muito
+superiores. O experimento ALICE usa redes neuronais no TPC para separar
+$\pi/K/p$ por dE/dx no gás~\cite{alice_pid} --- o mesmo problema físico
+fundamental, num detetor de gás em vez de silício.
 
-De forma independente, o experimento ALICE usa redes neuronais no TPC para
-separar $\pi/K/p$ por dE/dx no gás~\cite{alice_pid}, exactamente o mesmo
-problema físico que aqui se aborda mas num detetor de gás em vez de silício.
-O experimento NA62 (também no SPS do CERN, o mesmo acelerador do AMBER)
-usa BDTs para PID com detetores RICH e hodoscópios~\cite{pdg2022}.
-
-O trabalho aqui apresentado é, portanto, uma prova de conceito
-(\textit{proof-of-concept}) academicamente correcta do método que estes
-sistemas usam em produção.
+O trabalho aqui apresentado é uma demonstração académica em dados de simulação
+do mesmo princípio físico que estes sistemas exploram, sem pretender replicar
+a sua escala, complexidade de sub-detectores ou condições de dados reais.
 
 \subsubsection{O que falta para uma ferramenta de produção}
 
@@ -1346,15 +1380,19 @@ mais eficaz:
 
 \subsubsection{Síntese}
 
-Este trabalho demonstra que a aprendizagem automática é uma ferramenta
-eficaz para PID num detector de silício do tipo AMBER Target, com AUC de
-$0.99$ na região de baixo momento onde a separação por dE/dx é fisicamente
-possível. O método reproduz quantitativamente as previsões da fórmula de
-Bethe-Bloch --- incluindo o colapso da separação a $p > 5~\text{GeV}/c$ ---
-e constitui uma prova de conceito do mesmo princípio usado em produção
-pelo LHCb e pelo ALICE. Os passos seguintes para uma ferramenta de produção
-real estão claramente identificados e são tecnicamente realizáveis com
-os dados reais do AMBER Target.
+Em dados de simulação Geant4, a aprendizagem automática mostrou-se uma
+ferramenta eficaz para PID num detector de silício do tipo AMBER Target,
+com AUC $\approx 0.99$ na região de baixo momento ($p < 1~\text{GeV}/c$)
+onde a separação por dE/dx é fisicamente possível. O classificador reproduz
+quantitativamente a degradação da separação prevista pela fórmula de
+Bethe-Bloch, incluindo o colapso para AUC $\approx 0.53$ (essencialmente
+aleatório) quando as curvas de dE/dx das duas espécies convergem a
+$p > 5~\text{GeV}/c$. Este resultado ilustra, a escala académica e em
+condições simplificadas, o mesmo princípio físico que fundamenta os sistemas
+de PID por aprendizagem automática em operação no LHCb e no ALICE. Os passos
+seguintes para uma ferramenta aplicável a dados reais estão identificados
+na Secção~\ref{sec:ml_perspectivas} e são tecnicamente realizáveis com os
+dados de calibração do AMBER Target.
 
 %=============================================================================
 \section{Conclusão}
@@ -1374,17 +1412,18 @@ $K^\pm$ e $\mu^\pm$ --- são partículas secundárias produzidas nas interaçõe
 hadrónicas e electromagnéticas dos piões primários no alvo activo, numa
 multiplicidade de $\sim 1000$ secundários por pião incidente.
 
-\textbf{Deposição de energia e validação de Bethe-Bloch.}
+\textbf{Deposição de energia e compatibilidade com Bethe-Bloch.}
 As distribuições de Landau foram ajustadas para piões, kaões e protões em
 todos os quatro detetores. O MPV decresce $\SI{8}{keV}$ por detetor para piões,
 consistente com a equação de Bethe-Bloch, e aumenta com a massa da partícula
-($\pi^\pm \to K^\pm \to p$), confirmando a dependência em $1/\beta^2$ prevista
+($\pi^\pm \to K^\pm \to p$), reproduzindo a dependência em $1/\beta^2$ prevista
 pela teoria. A comparação directa das curvas teóricas de Bethe-Bloch (calculadas
-para silício, PDG 2022) com os dados experimentais mostra acordo satisfatório na
+para silício, PDG 2022) com os dados simulados mostra acordo satisfatório na
 região $p < 5~\text{GeV}/c$, com uma espessura efectiva do detetor de
 $4.7~\text{mm}$ inferida dos dados. A verificação da consistência entre runs
-identificou um desvio sistemático no Run~0 ($+8.5\sigma$, $+\SI{13}{keV}$),
-sublinhando a importância da validação run-a-run antes da combinação dos dados.
+identificou um desvio sistemático no Run~0 ($+8.5\sigma$, $+\SI{13}{keV}$)
+cuja origem exacta não foi determinada, sublinhando a importância da
+validação run-a-run antes da combinação dos dados.
 
 \textbf{Capacidade de identificação de partículas (PID).}
 A análise quantitativa do poder de separação revelou dois regimes distintos.
@@ -1398,12 +1437,29 @@ da curva de Bethe-Bloch e a diferença de MPV ($\SI{25}{keV}$) é muito inferior
 $\pi/K$ a alto momento requer detectores RICH, como efectivamente implementado
 no AMBER.
 
+\textbf{Identificação por aprendizagem automática.}
+O classificador de \textit{Gradient Boosting} treinado sobre os dados simulados
+demonstrou que a separação $\pi/p$ por dE/dx é quantitativamente viável em
+$p \in [0.5, 2.0]~\text{GeV}/c$, com AUC $= 0.975$ e \textit{balanced accuracy}
+$= 92.8\%$. O comportamento do classificador é fisicamente coerente: a AUC
+decresce de $\approx 0.99$ a $p < 1~\text{GeV}/c$ para $\approx 0.53$
+(essencialmente aleatório) a $p > 5~\text{GeV}/c$, exactamente onde a fórmula
+de Bethe-Bloch prevê que as curvas de dE/dx das duas espécies convergem.
+O método de ML confirma quantitativamente os limites já identificados pela
+análise analítica: a separação $\pi/K$ é fisicamente inviável por dE/dx a este
+regime de momento, reforçando a necessidade de detectores RICH para PID
+completo. Estes resultados constituem uma demonstração, à escala académica
+e em dados de simulação, do mesmo princípio físico que fundamenta os sistemas
+de PID por aprendizagem automática em uso no LHCb e no ALICE.
+
 % [Conclusões das restantes secções a integrar pelos colegas]
 
-Os resultados obtidos validam o modelo de simulação Geant4 e fornecem uma base
-quantitativa para a compreensão da resposta do detector AMBER Target, incluindo
-a caracterização da produção de partículas secundárias no alvo activo e os
-limites intrínsecos da identificação de partículas por perda de energia.
+Em conjunto, os resultados obtidos reproduzem o comportamento esperado da física
+de ionização de partículas carregadas em silício, validam a consistência do
+pipeline de análise e fornecem uma base quantitativa para a compreensão da
+resposta do detector AMBER Target — incluindo a caracterização da produção de
+partículas secundárias no alvo activo e os limites intrínsecos da identificação
+de partículas por perda de energia.
 
 %=============================================================================
 \begin{thebibliography}{9}
