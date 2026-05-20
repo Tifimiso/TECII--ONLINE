@@ -754,24 +754,47 @@ o modelo Geant4 utilizado. Os pontos principais são:
 
 Este trabalho apresentou a simulação e análise do detector AMBER Target usando
 Geant4 e PyROOT, com dados de quatro runs independentes totalizando
-$3.31 \times 10^6$ tracks.
+$3.37 \times 10^6$ tracks.
 
-No que respeita à deposição de energia, os resultados confirmam a validade
-da simulação: as distribuições de Landau são bem reproduzidas para todas as
-espécies hadrónicas, o MPV decresce linearmente ao longo dos detetores de
-forma consistente com a equação de Bethe-Bloch, e a dependência do MPV com
-a massa da partícula ($\pi^\pm \to K^\pm \to p$) está em acordo com as
-previsões teóricas. O gráfico dE/dx vs momento revela a estrutura característica
-das bandas de Bethe-Bloch, com separação máxima a baixo momento e convergência
-a $p \gtrsim 5~\text{GeV}/c$. O poder de separação entre piões e protões com
-um único detetor é de $\sim 1.4\sigma$, o que evidencia a necessidade de
-combinar a informação de múltiplos detetores para PID eficiente.
+\textbf{Composição do feixe e natureza das partículas.}
+A utilização do campo \texttt{IsPrimary} revelou que o feixe primário é
+constituído exclusivamente por $3\,485$ piões carregados ($0.1\%$ do total),
+consistente com a operação do AMBER com um feixe de $\pi^\pm$ do SPS.
+A totalidade das restantes espécies observadas --- $e^\pm$, $\gamma$, $p$,
+$K^\pm$ e $\mu^\pm$ --- são partículas secundárias produzidas nas interações
+hadrônicas e electromagnéticas dos piões primários no alvo activo, numa
+multiplicidade de $\sim 1000$ secundários por pião incidente.
+
+\textbf{Deposição de energia e validação de Bethe-Bloch.}
+As distribuições de Landau foram ajustadas para piões, kaões e protões em
+todos os quatro detetores. O MPV decresce $\SI{8}{keV}$ por detetor para piões,
+consistente com a equação de Bethe-Bloch, e aumenta com a massa da partícula
+($\pi^\pm \to K^\pm \to p$), confirmando a dependência em $1/\beta^2$ prevista
+pela teoria. A comparação directa das curvas teóricas de Bethe-Bloch (calculadas
+para silício, PDG 2022) com os dados experimentais mostra acordo satisfatório na
+região $p < 5~\text{GeV}/c$, com uma espessura efectiva do detetor de
+$4.7~\text{mm}$ inferida dos dados. A verificação da consistência entre runs
+identificou um desvio sistemático no Run~0 ($+8.5\sigma$, $+\SI{13}{keV}$),
+sublinhando a importância da validação run-a-run antes da combinação dos dados.
+
+\textbf{Capacidade de identificação de partículas (PID).}
+A análise quantitativa do poder de separação revelou dois regimes distintos.
+A separação $\pi^\pm$ vs $p$ e $K^\pm$ vs $p$ é de $\sim 1.3$--$1.4\sigma$
+num único detetor --- insuficiente para PID standalone (critério padrão:
+$> 3\sigma$), mas potencialmente melhorável com a combinação dos quatro detetores.
+A separação $\pi^\pm$ vs $K^\pm$ é praticamente nula ($N_\sigma \approx 0.18$):
+a $p > 0.5~\text{GeV}/c$, ambas as espécies convergem para o mínimo de ionização
+da curva de Bethe-Bloch e a diferença de MPV ($\SI{25}{keV}$) é muito inferior
+à largura das distribuições. Este resultado confirma que a identificação
+$\pi/K$ a alto momento requer detectores RICH, como efectivamente implementado
+no AMBER.
 
 % [Conclusões das restantes secções a integrar pelos colegas]
 
-Os resultados obtidos validam o modelo de simulação e fornecem uma base
-quantitativa para a optimização do sistema de detetores do experimento AMBER
-no CERN SPS.
+Os resultados obtidos validam o modelo de simulação Geant4 e fornecem uma base
+quantitativa para a compreensão da resposta do detector AMBER Target, incluindo
+a caracterização da produção de partículas secundárias no alvo activo e os
+limites intrínsecos da identificação de partículas por perda de energia.
 
 %=============================================================================
 \begin{thebibliography}{9}
