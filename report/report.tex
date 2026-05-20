@@ -525,10 +525,9 @@ dE/dx impraticável sem informação adicional.
 $\langle\text{dE/dx}\rangle$ (calculada com \texttt{TProfile}), que é
 fortemente influenciada pela cauda direita da distribuição de Landau.
 A fórmula de Bethe-Bloch prevê rigorosamente o \textit{most probable value}
-(MPV), não a média. Para uma comparação quantitativa com a teoria seria
-necessário calcular o MPV em cada bin de momento através de ajustes de Landau
-individuais. Para os fins qualitativos deste trabalho — identificar as bandas
-características e verificar a convergência a alto momento — a média é suficiente.
+(MPV), não a média. Uma análise baseada em MPV — mais fisicamente correcta
+para comparação quantitativa com Bethe-Bloch — é apresentada na
+secção~\ref{sec:dedx_mpv}.
 
 \textbf{Comparação com a previsão teórica de Bethe-Bloch:}
 a Figura~\ref{fig:dedx_bb} sobrepõe os dados experimentais com as curvas
@@ -558,6 +557,46 @@ bandas das três espécies estão bem separadas. A divergência a $p \gtrsim 5~\
 de Sternheimer, que suprime o aumento relativista (platô de Fermi) observado
 experimentalmente. Esta comparação quantitativa confirma que os dados simulados
 são consistentes com a física de ionização de partículas carregadas em silício.
+
+\subsubsection{dE/dx baseado em MPV de Landau por bin de momento}
+\label{sec:dedx_mpv}
+
+A média aritmética $\langle\text{dE/dx}\rangle$ de um TProfile é um estimador
+enviesado para distribuições de Landau, cuja cauda direita assimétrica puxa
+sistematicamente a média para valores acima do MPV. A fórmula de Bethe-Bloch
+prevê o valor mais provável de energia depositada, não a média.
+
+Para uma comparação quantitativa rigorosa com a teoria, ajusta-se uma
+distribuição de Landau em cada bin de momento (18 bins logarítmicos entre
+$0.3$ e $10~\text{GeV}/c$) e extrai-se o MPV e a sua incerteza do ajuste.
+A Figura~\ref{fig:dedx_mpv} apresenta estes pontos experimentais sobrepostos
+com as curvas de Bethe-Bloch teóricas, usando os mesmos parâmetros do silício
+e a mesma espessura efectiva de $4.7~\text{mm}$.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{plots/energy/dedx_mpv_vs_momentum.png}
+  \caption{MPV do fit de Landau vs momento para piões (18 bins), kaões (17 bins)
+    e protões (18 bins). As linhas tracejadas são as curvas de Bethe-Bloch
+    teóricas para silício. Os pontos experimentais seguem o comportamento
+    $1/\beta^2$ previsto pela teoria — queda a baixo momento, mínimo de
+    ionização em $\beta\gamma \approx 3$--$4$, e ligeiro aumento relativista
+    a alto momento. O acordo quantitativo é melhor do que na
+    Figura~\ref{fig:dedx_bb} porque o MPV é o estimador correcto para
+    comparar com Bethe-Bloch, ao contrário da média aritmética.}
+  \label{fig:dedx_mpv}
+\end{figure}
+
+Os dados de piões cobrem toda a gama de momento de $0.3$ a $10~\text{GeV}/c$
+com boa estatística (1\,600 a 8\,200 entradas por bin), confirmando o mínimo de
+ionização em $p \approx 0.5~\text{GeV}/c$ ($\text{MPV} \approx 1.54~\text{MeV}$)
+e a convergência para o MPV mínimo de $\approx 1.40~\text{MeV}$ a alto momento.
+Os kaões têm estatística mais limitada mas seguem a mesma curva de Bethe-Bloch
+com MPV superiores aos dos piões a baixo momento, como esperado pela maior
+massa ($m_K/m_\pi \approx 3.5$). Os protões exibem o comportamento mais
+pronunciado: MPV de $8.2~\text{MeV}$ em $p = 0.4~\text{GeV}/c$
+($\beta\gamma \approx 0.40$, longe do MIP) até $1.4~\text{MeV}$ a
+$p = 9~\text{GeV}/c$ ($\beta\gamma \approx 9.6$, próximo do mínimo).
 
 \subsubsection{Resolução do detetor e poder de separação entre espécies}
 \label{sec:resolucao}
