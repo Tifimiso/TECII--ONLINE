@@ -215,6 +215,16 @@ __marimo__/
 *.csv
 report/report.pdf
 
+# Overleaf ZIPs e pastas de build temporárias
+report_overleaf*.zip
+report_overleaf*/
+
+# Plots de teste temporários
+plots/energy/test_mg*.png
+
+# PDF do enunciado (ficheiro grande, não é código)
+TrabalhoPratico2024.pdf
+
 # Artefactos Windows (Zone.Identifier) — ficheiros de metadados criados automaticamente
 # pelo Windows quando ficheiros são descarregados da internet.
 *:Zone.Identifier
