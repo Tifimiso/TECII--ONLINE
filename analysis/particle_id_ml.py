@@ -402,7 +402,212 @@ def plot_cv_scores(acc_folds, auc_folds):
 
 
 # ---------------------------------------------------------------------------
-# 5. Programa principal
+# 5. Curva eficiência-pureza (π vs p)
+# ---------------------------------------------------------------------------
+
+def plot_efficiency_purity(clf, X_test, y_test):
+    """
+    Curva eficiência-pureza (precision-recall) para a separação π vs p.
+
+    Num experimento real, o físico escolhe o ponto de operação em função do
+    objectivo da análise:
+      - Alta pureza (poucas contaminações) → menos eventos, resultado mais limpo
+      - Alta eficiência (poucos eventos perdidos) → mais contaminação
+
+    Usa os eventos π e p do conjunto de teste, com P(protão) como score.
+    Normaliza para o caso binário: P(p | π ou p) = P(p) / (P(π) + P(p)).
+    Mostra três pontos de operação representativos (90%, 95%, 99% pureza).
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    from sklearn.metrics import precision_recall_curve, average_precision_score
+
+    # filtrar apenas π (y=0) e p (y=2) do conjunto de teste
+    mask_pip = (y_test == 0) | (y_test == 2)
+    X_pp   = X_test[mask_pip]
+    y_pp   = (y_test[mask_pip] == 2).astype(int)   # 0=pião, 1=protão
+
+    y_prob_pp = clf.predict_proba(X_pp)
+    # probabilidade normalizada para o caso binário π/p
+    prob_pi = y_prob_pp[:, 0]
+    prob_p  = y_prob_pp[:, 2]
+    score   = prob_p / (prob_pi + prob_p + 1e-12)
+
+    prec, rec, thresholds = precision_recall_curve(y_pp, score)
+    ap = average_precision_score(y_pp, score)
+
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+
+    # --- curva pureza vs eficiência ---
+    ax = axes[0]
+    ax.plot(rec, prec, color="steelblue", lw=2,
+            label=f"AP = {ap:.4f}")
+    ax.set_xlabel("Eficiência (recall de protões)", fontsize=12)
+    ax.set_ylabel("Pureza (precision de protões)", fontsize=12)
+    ax.set_title("Curva eficiência–pureza\nprotão vs pião", fontsize=12)
+    ax.grid(True, alpha=0.3)
+
+    # pontos de operação a 90%, 95%, 99% de pureza
+    op_purities = [0.90, 0.95, 0.99]
+    op_colors   = ["green", "orange", "red"]
+    for target_purity, col in zip(op_purities, op_colors):
+        # encontrar o threshold com pureza >= target
+        valid = np.where(prec >= target_purity)[0]
+        if len(valid) == 0:
+            continue
+        idx = valid[np.argmax(rec[valid])]   # maior eficiência a essa pureza
+        ax.scatter(rec[idx], prec[idx], s=80, color=col, zorder=5,
+                   label=f"Pureza {int(target_purity*100)}%: eff={rec[idx]:.2f}")
+
+    ax.legend(fontsize=10)
+    ax.set_xlim(0, 1.02)
+    ax.set_ylim(0.3, 1.02)
+
+    # --- eficiência e pureza vs threshold ---
+    ax2 = axes[1]
+    t_plot = thresholds
+    ax2.plot(t_plot, prec[:-1], color="darkorange", lw=2, label="Pureza")
+    ax2.plot(t_plot, rec[:-1],  color="steelblue",  lw=2, label="Eficiência")
+    f1 = 2 * prec[:-1] * rec[:-1] / (prec[:-1] + rec[:-1] + 1e-12)
+    ax2.plot(t_plot, f1, color="green", lw=2, linestyle="--", label="F1-score")
+    ax2.axvline(0.5, color="gray", lw=1, linestyle=":", label="Threshold = 0.5")
+    ax2.set_xlabel("Threshold de decisão P(protão)", fontsize=12)
+    ax2.set_ylabel("Score", fontsize=12)
+    ax2.set_title("Pureza e eficiência vs threshold\nprotão vs pião", fontsize=12)
+    ax2.legend(fontsize=10)
+    ax2.grid(True, alpha=0.3)
+    ax2.set_xlim(0, 1)
+    ax2.set_ylim(0, 1.05)
+
+    plt.tight_layout()
+    out = f"{OUTPUT_DIR}/ml_efficiency_purity.png"
+    plt.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"[OK] {out}")
+
+    # imprimir pontos de operação
+    print("  Pontos de operação π vs p:")
+    for target_purity, col in zip(op_purities, op_colors):
+        valid = np.where(prec >= target_purity)[0]
+        if len(valid) == 0:
+            print(f"    Pureza {int(target_purity*100)}%: não atingível")
+            continue
+        idx = valid[np.argmax(rec[valid])]
+        thr = thresholds[idx] if idx < len(thresholds) else 1.0
+        print(f"    Pureza {int(target_purity*100)}%: "
+              f"eficiência = {rec[idx]:.3f}, threshold = {thr:.3f}")
+
+
+# ---------------------------------------------------------------------------
+# 6. Classificador por bin de momento (π vs p, só dE/dx)
+# ---------------------------------------------------------------------------
+
+def plot_auc_vs_momentum(X, y):
+    """
+    Treina classificadores binários π vs p em bins de momento,
+    usando APENAS a deposição de energia nos 4 detetores como features
+    (o momento é o que define o bin — simula o cenário real onde o
+    espectrômetro magnético já fornece p e o dE/dx faz o PID).
+
+    Resultado: AUC decresce com o momento, confirmando que a separação
+    por dE/dx só é eficaz a baixo momento — resultado fisicamente esperado
+    pela curva de Bethe-Bloch.
+
+    Bins de momento: [0.5–1.0], [1.0–2.0], [2.0–5.0], [>5.0] GeV/c.
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    # apenas piões (y=0) e protões (y=2)
+    mask_pp = (y == 0) | (y == 2)
+    X_pp = X[mask_pp]
+    y_pp = (y[mask_pp] == 2).astype(int)
+    mom  = X_pp[:, 4]   # feature 4 = momentum_GeV
+
+    bins_edges  = [0.5, 1.0, 2.0, 5.0, 12.0]
+    bins_labels = ["0.5–1.0", "1.0–2.0", "2.0–5.0", ">5.0"]
+    bins_center = [0.75, 1.5, 3.5, 7.0]
+
+    auc_bins = []
+    n_bins   = []
+    MIN_PER_CLASS = 200
+
+    print("  Classificadores por bin de momento (features = dE/dx × 4):")
+    for lo, hi, label in zip(bins_edges[:-1], bins_edges[1:], bins_labels):
+        m = (mom >= lo) & (mom < hi)
+        X_bin = X_pp[m][:, :4]   # só os 4 dE/dx, sem o momento
+        y_bin = y_pp[m]
+
+        n_pi = (y_bin == 0).sum()
+        n_p  = (y_bin == 1).sum()
+        n_total = len(y_bin)
+
+        if n_pi < MIN_PER_CLASS or n_p < MIN_PER_CLASS:
+            print(f"    p ∈ [{label}] GeV/c: "
+                  f"estatística insuficiente (π={n_pi}, p={n_p}) — ignorado")
+            auc_bins.append(np.nan)
+            n_bins.append(n_total)
+            continue
+
+        # split 70/30 estratificado dentro do bin
+        X_tr, X_te, y_tr, y_te = train_test_split(
+            X_bin, y_bin, test_size=0.30,
+            random_state=RANDOM_STATE, stratify=y_bin
+        )
+        sw = compute_sample_weight("balanced", y_tr)
+        clf_bin = HistGradientBoostingClassifier(**CLF_PARAMS)
+        clf_bin.fit(X_tr, y_tr, sample_weight=sw)
+
+        y_prob_bin = clf_bin.predict_proba(X_te)[:, 1]
+        auc_val = roc_auc_score(y_te, y_prob_bin)
+        auc_bins.append(auc_val)
+        n_bins.append(n_total)
+        print(f"    p ∈ [{label}] GeV/c: AUC = {auc_val:.4f}  "
+              f"(n={n_total:,}: π={n_pi:,}, p={n_p:,})")
+
+    # --- gráfico ---
+    valid = [(c, a, n) for c, a, n in zip(bins_center, auc_bins, n_bins)
+             if not np.isnan(a)]
+    if not valid:
+        print("  [AVISO] Nenhum bin com estatística suficiente.")
+        return
+
+    cx, av, nv = zip(*valid)
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sc = ax.scatter(cx, av, s=[n / 50 for n in nv],
+                    c=av, cmap="RdYlGn", vmin=0.5, vmax=1.0,
+                    zorder=5, edgecolors="black", linewidths=0.7)
+    ax.plot(cx, av, "k--", lw=1, alpha=0.5)
+    plt.colorbar(sc, ax=ax, label="AUC")
+
+    for c, a, n in zip(cx, av, nv):
+        ax.annotate(f"AUC={a:.3f}\n(n={n:,})",
+                    (c, a), textcoords="offset points",
+                    xytext=(0, 12), ha="center", fontsize=9)
+
+    ax.axhline(0.5, color="gray", lw=1.2, linestyle=":",
+               label="Baseline aleatório (AUC=0.5)")
+    ax.axhline(0.9, color="green", lw=1.0, linestyle="--",
+               alpha=0.6, label="Limiar de boa separação (AUC=0.9)")
+    ax.set_xlabel("Momento (GeV/c)", fontsize=12)
+    ax.set_ylabel("AUC (π vs p, só dE/dx)", fontsize=12)
+    ax.set_title("AUC do classificador dE/dx por bin de momento\n"
+                 "π vs p — features: deposição de energia nos 4 detetores",
+                 fontsize=12)
+    ax.set_xticks([0.75, 1.5, 3.5, 7.0])
+    ax.set_xticklabels(["0.5–1.0", "1.0–2.0", "2.0–5.0", ">5.0"])
+    ax.set_ylim(0.45, 1.05)
+    ax.legend(fontsize=10)
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+
+    out = f"{OUTPUT_DIR}/ml_auc_vs_momentum.png"
+    plt.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"[OK] {out}")
+
+
+# ---------------------------------------------------------------------------
+# 7. Programa principal
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
@@ -462,6 +667,10 @@ if __name__ == "__main__":
     plot_feature_importance(clf, X_test, y_test)
     plot_decision_boundary(clf, X, y)
     plot_cv_scores(acc_folds, auc_folds)
+    plot_efficiency_purity(clf, X_test, y_test)
+
+    print("\nA treinar classificadores por bin de momento...")
+    plot_auc_vs_momentum(X, y)
 
     print(f"\nAUC por classe:")
     for nome, val in zip(CLASS_NAMES, auc_por_classe):
