@@ -1,6 +1,20 @@
-numpy
-matplotlib
-uproot       # leitura de ficheiros ROOT
-awkward      # arrays para dados ROOT
-pandas
-jupyter
+# Dependências para análise do AMBER Target (TECII-ONLINE)
+# Instalar com: pip install -r requirements.txt
+
+# Leitura de ficheiros ROOT
+uproot>=5.0.0
+awkward>=2.0.0
+
+# Computação numérica
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Aprendizagem automática
+scikit-learn>=1.3.0
+
+# Visualização
+matplotlib>=3.7.0
+
+# Utilitários opcionais
+pandas>=2.0.0
+jupyter>=1.0.0
