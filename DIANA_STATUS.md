@@ -29,41 +29,24 @@ Classificador Gradient Boosting (HistGradientBoostingClassifier) para identifica
 
 Escrevi as secções: Introdução, Dados e Metodologia, 3.1 (deposição de energia), 3.6 (ML/PID), 3.7 (perspectivas), e a Conclusão (com espaço para as secções dos colegas).
 
-Já integrei também a secção 3.5 do José no documento.
+Já integrei também a secção 3.5 (Distribuição do Momento) no documento.
 
 ---
 
-## Para o Tiago
+## Para os colegas
 
-A tua parte é a **secção 3.2 (Distribuição de Hits)** e/ou **3.3 (Vértices Hadrónicos)** — confirma qual.
+Para contribuírem para o relatório:
+1. `git fetch origin` + `git merge origin/Diana` na vossa branch
+2. Editam `report/report.tex` na secção correspondente (marcada com comentários `% INSTRUÇÕES`)
+3. Guardam as figuras em `plots/` numa subpasta com o nome da análise
+4. Abrem um PR para a branch `Diana` (não para main)
 
-Para contribuíres para o relatório:
-1. Faz `git fetch origin` + `git merge origin/Diana` na tua branch
-2. Edita `report/report.tex` na secção correspondente (está marcada com comentários `% INSTRUÇÕES`)
-3. Guarda as tuas figuras em `plots/` numa subpasta com o nome da tua análise
-4. Commita e abre um PR para a branch `Diana` (não para main)
+Para dúvidas sobre a estrutura do LaTeX, olhem para as secções 3.1 ou 3.5 — é o mesmo padrão.
 
-Se tiveres dúvidas sobre a estrutura do LaTeX, olha para como estão feitas as secções 3.1 ou 3.5 — é o mesmo padrão.
-
----
-
-## Para o Rafael
-
-A tua parte é a **secção 3.4 (Distribuição Temporal)** — confirma com o grupo.
-
-Mesmo processo que o Tiago:
-1. `git fetch origin` + `git merge origin/Diana`
-2. Edita a tua secção em `report/report.tex`
-3. Figuras em `plots/<nome-da-tua-análise>/`
-4. PR para a branch `Diana`
-
----
-
-## Para o José
-
-A tua secção 3.5 (Distribuição do Momento) já está integrada no documento. Obrigada!
-
-Uma coisa a confirmar: os caminhos das figuras no relatório ficaram `plots/momentum/...` (sem `../`). Se compilares localmente, as figuras precisam de estar em `plots/momentum/` a partir da raiz do projecto, não dentro de `report/`. Diz-me se precisas de ajustar.
+**Secções que ainda precisam de ser preenchidas:**
+- 3.2 — Distribuição de Hits
+- 3.3 — Vértices Hadrónicos
+- 3.4 — Distribuição Temporal
 
 ---
 
