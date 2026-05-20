@@ -40,6 +40,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.colors as mcolors
 from matplotlib.colors import ListedColormap
 
 import uproot
@@ -886,7 +887,6 @@ def plot_features_binario(clf, X_test, y_test):
 
 def plot_boundary_binario(clf, X, y):
     """Fronteira de decisão 2D para o classificador binário."""
-    import matplotlib.colors as mcolors_local
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     KEV_TO_MEV = 1e-3
     rng = np.random.default_rng(RANDOM_STATE)
@@ -915,7 +915,7 @@ def plot_boundary_binario(clf, X, y):
     ])
     Z = clf.predict_proba(grid_feat)[:, 1].reshape(xx.shape)
 
-    cmap_bg = mcolors_local.LinearSegmentedColormap.from_list(
+    cmap_bg = mcolors.LinearSegmentedColormap.from_list(
         "binary_pid", [(0.85, 0.90, 1.0), (1.0, 0.85, 1.0)]
     )
     fig, ax = plt.subplots(figsize=(9, 6))
@@ -945,7 +945,63 @@ def plot_boundary_binario(clf, X, y):
 
 
 # ---------------------------------------------------------------------------
-# 7. Programa principal
+# 7. Curvas de aprendizagem
+# ---------------------------------------------------------------------------
+
+def plot_learning_curves(X, y, suffix="", titulo=""):
+    """
+    Curvas de aprendizagem: balanced accuracy no treino e na validação cruzada
+    em função do tamanho do conjunto de treino.
+
+    Permite detectar overfitting (gap treino/val grande) ou underfitting
+    (ambas as curvas baixas). Num classificador bem ajustado as duas curvas
+    convergem para um valor elevado com o aumento dos dados.
+    """
+    from sklearn.model_selection import learning_curve
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    train_sizes, train_scores, val_scores = learning_curve(
+        HistGradientBoostingClassifier(**CLF_PARAMS),
+        X, y,
+        train_sizes=np.linspace(0.10, 1.0, 8),
+        cv=StratifiedKFold(n_splits=5, shuffle=True,
+                           random_state=RANDOM_STATE),
+        scoring="balanced_accuracy",
+        n_jobs=-1,
+    )
+
+    tr_mean = train_scores.mean(axis=1)
+    tr_std  = train_scores.std(axis=1)
+    va_mean = val_scores.mean(axis=1)
+    va_std  = val_scores.std(axis=1)
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.plot(train_sizes, tr_mean, "o-", color="steelblue",
+            lw=2, label="Treino")
+    ax.fill_between(train_sizes, tr_mean - tr_std, tr_mean + tr_std,
+                    alpha=0.15, color="steelblue")
+    ax.plot(train_sizes, va_mean, "s-", color="darkorange",
+            lw=2, label="Validação cruzada (5-fold)")
+    ax.fill_between(train_sizes, va_mean - va_std, va_mean + va_std,
+                    alpha=0.15, color="darkorange")
+
+    ax.set_xlabel("Tamanho do conjunto de treino (eventos)", fontsize=12)
+    ax.set_ylabel("Balanced accuracy", fontsize=12)
+    t = titulo if titulo else f"Curvas de aprendizagem{' — ' + suffix if suffix else ''}"
+    ax.set_title(t, fontsize=12)
+    ax.legend(fontsize=11)
+    ax.grid(True, alpha=0.3)
+    ax.set_ylim(0.50, 1.05)
+    plt.tight_layout()
+
+    out = f"{OUTPUT_DIR}/ml_learning_curves{('_' + suffix) if suffix else ''}.png"
+    plt.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"[OK] {out}")
+
+
+# ---------------------------------------------------------------------------
+# 8. Programa principal
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
@@ -991,7 +1047,7 @@ if __name__ == "__main__":
     print(f"  Balanced accuracy     : {bal_acc:.4f}  ({bal_acc*100:.2f}%)")
     print(f"  Accuracy (não balanceada): {acc:.4f}  ({acc*100:.2f}%)")
     print("  Nota: accuracy não balanceada é enganosa com 3 classes desequilibradas")
-    print(f"  Baseline aleatório (3 classes): 33.3%")
+    print("  Baseline aleatório (3 classes): 33.3%")
     print("\nRelatório de classificação:")
     print(classification_report(
         y_test, y_pred,
@@ -1006,6 +1062,13 @@ if __name__ == "__main__":
     plot_decision_boundary(clf, X, y)
     plot_cv_scores(acc_folds, auc_folds)
     plot_efficiency_purity(clf, X_test, y_test)
+
+    print("\nA gerar curvas de aprendizagem (Fase 1)...")
+    plot_learning_curves(
+        X, y,
+        suffix="fase1",
+        titulo="Curvas de aprendizagem — Fase 1 (π, K, p)",
+    )
 
     print("\nA treinar classificadores por bin de momento...")
     plot_auc_vs_momentum(X, y)
@@ -1038,6 +1101,21 @@ if __name__ == "__main__":
     print("  Treino concluído.")
 
     print("\n[5/5] A avaliar e gerar gráficos...")
+
+    # Verificar domínio de validade antes de classificar (passo obrigatório em
+    # produção: eventos fora de [P_MIN, P_MAX] GeV/c são marcados como
+    # "não classificável por dE/dx" e não devem ser passados ao classificador).
+    validos_te = dominio_valido(X_bte[:, 4])
+    n_fora = int((~validos_te).sum())
+    if n_fora > 0:
+        print(f"  AVISO: {n_fora} eventos fora do domínio [{P_MIN}, {P_MAX}] GeV/c "
+              f"— removidos antes da classificação")
+        X_bte = X_bte[validos_te]
+        y_bte = y_bte[validos_te]
+    else:
+        print(f"  Domínio OK: todos os {len(X_bte):,} eventos estão em "
+              f"p ∈ [{P_MIN}, {P_MAX}] GeV/c")
+
     y_bpred = clf_b.predict(X_bte)
     y_bprob = clf_b.predict_proba(X_bte)[:, 1]
     acc_b    = accuracy_score(y_bte, y_bpred)
@@ -1051,7 +1129,7 @@ if __name__ == "__main__":
     print(f"  Balanced accuracy    : {bal_b:.4f}  ({bal_b*100:.2f}%)")
     print(f"  Accuracy             : {acc_b:.4f}  ({acc_b*100:.2f}%)")
     print(f"\n  Domínio de validade  : p ∈ [{P_MIN}, {P_MAX}] GeV/c")
-    print(f"  Fora do domínio: classificar como 'não classificável por dE/dx'")
+    print("  Fora do domínio: classificar como 'não classificável por dE/dx'")
     print("\nRelatório de classificação:")
     print(classification_report(y_bte, y_bpred,
                                 target_names=["Pião", "Protão"], digits=4))
@@ -1063,6 +1141,11 @@ if __name__ == "__main__":
     plot_features_binario(clf_b, X_bte, y_bte)
     plot_boundary_binario(clf_b, X_b, y_b)
 
-    print("\nDone. Todos os gráficos guardados em:", OUTPUT_DIR)
+    print("\nA gerar curvas de aprendizagem (Fase 2)...")
+    plot_learning_curves(
+        X_b, y_b,
+        suffix="fase2",
+        titulo=f"Curvas de aprendizagem — Fase 2 (π vs p, p ∈ [{P_MIN}, {P_MAX}] GeV/c)",
+    )
 
-    print("\nDone. Gráficos guardados em:", OUTPUT_DIR)
+    print("\nDone. Todos os gráficos guardados em:", OUTPUT_DIR)
