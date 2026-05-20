@@ -71,13 +71,58 @@ trabalho          ❌
 Os ficheiros de dados (`.root`) **não estão no repositório git** — são demasiado grandes.
 Ver as instruções em [`data/README.md`](data/README.md) para obter os ficheiros e colocá-los na pasta correta.
 
-## Instalação de Dependências
+## Pré-requisitos de Reprodutibilidade
+
+### Dependências Python
 
 ```bash
 pip install -r requirements.txt
 ```
 
+As versões mínimas estão especificadas em `requirements.txt`. Se houver problemas
+de compatibilidade, confirmar as versões instaladas com `pip list`.
+
+### ROOT (para `energy_deposition.py`)
+
+O script `energy_deposition.py` usa a API C++ do ROOT via PyROOT.  
+Requer ROOT 6.x instalado e acessível no PATH. Confirmar com:
+
+```bash
+root --version
+python -c "import ROOT; print(ROOT.__version__)"
+```
+
+A instalação recomendada é via `conda`:
+```bash
+conda install -c conda-forge root
+```
+
+### Ficheiros de dados ROOT
+
+Os ficheiros `.root` **não estão no repositório** (demasiado grandes).  
+Devem ser colocados na pasta `data/` com os nomes exactos:
+
+```
+data/AmberTarget_Run_0.root
+data/AmberTarget_Run_1.root
+data/AmberTarget_Run_2.root
+data/AmberTarget_Run_3.root
+```
+
+Ver [`data/README.md`](data/README.md) para instruções de obtenção.
+
+> Os scripts verificam automaticamente a existência dos ficheiros e terminam com
+> mensagem de erro clara se algum estiver em falta.
+
 ## Como Executar a Análise
+
+### Confirmar que os dados estão presentes
+
+```bash
+ls -lh data/*.root
+```
+
+Devem aparecer os 4 ficheiros `AmberTarget_Run_*.root`.
 
 ### Opção 1 — Pipeline completo (recomendado)
 
@@ -91,8 +136,8 @@ pelos colegas são saltados automaticamente sem errar.
 ### Opção 2 — Só a análise de energia + ML (secção da Diana)
 
 ```bash
-python run_all.py --energy   # deposição de energia
-python run_all.py --ml       # classificador ML
+python run_all.py --energy   # deposição de energia (ROOT/PyROOT)
+python run_all.py --ml       # classificador ML (uproot + scikit-learn)
 ```
 
 ### Opção 3 — Script individual
@@ -103,6 +148,17 @@ python analysis/particle_id_ml.py      # identificação por ML
 ```
 
 Os gráficos são guardados automaticamente em `plots/energy/`.
+
+### Compilar o relatório LaTeX
+
+```bash
+cd report
+pdflatex report.tex
+pdflatex report.tex   # segunda execução para referências cruzadas
+```
+
+Ou usar um editor LaTeX (Overleaf, TeXstudio, VS Code + LaTeX Workshop).  
+Para Overleaf: ver as instruções na raiz do repositório sobre a estrutura do ZIP.
 
 ---
 

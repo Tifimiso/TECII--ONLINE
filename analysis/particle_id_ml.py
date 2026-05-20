@@ -65,6 +65,24 @@ DATA_FILES = [
     "data/AmberTarget_Run_2.root",
     "data/AmberTarget_Run_3.root",
 ]
+
+
+def verificar_ficheiros():
+    """
+    Verifica que todos os ficheiros ROOT estão presentes antes de iniciar a análise.
+    Termina com mensagem clara se algum ficheiro estiver em falta.
+    """
+    import sys
+    em_falta = [f for f in DATA_FILES if not os.path.isfile(f)]
+    if em_falta:
+        print("[ERRO] Ficheiros ROOT em falta:")
+        for f in em_falta:
+            print(f"  - {f}")
+        print()
+        print("Instruções: copiar os ficheiros .root para a pasta data/")
+        print("Ver data/README.md para mais informações.")
+        sys.exit(1)
+    print(f"[OK] Todos os {len(DATA_FILES)} ficheiros ROOT encontrados.")
 OUTPUT_DIR = "plots/energy"
 RANDOM_STATE = 42
 
@@ -104,7 +122,19 @@ def carregar_dados():
     arrays = []
     for fname in DATA_FILES:
         with uproot.open(fname) as f:
-            arrays.append(f["tracksData"].arrays(branches, library="np"))
+            arr = f["tracksData"].arrays(branches, library="np")
+            n_entries = len(arr["particlePDG"])
+            if n_entries == 0:
+                print(f"  [AVISO] {fname}: TTree 'tracksData' vazia — ficheiro ignorado.")
+                continue
+            print(f"  [OK] {fname}: {n_entries:,} entradas.")
+            arrays.append(arr)
+
+    if not arrays:
+        raise RuntimeError(
+            "Nenhum ficheiro ROOT continha dados válidos em 'tracksData'. "
+            "Verificar os ficheiros em data/."
+        )
 
     data = {k: np.concatenate([a[k] for a in arrays]) for k in branches}
 
@@ -117,6 +147,13 @@ def carregar_dados():
         (edep0 > 10) &
         (mom > 0.5)
     )
+
+    if mask.sum() == 0:
+        raise RuntimeError(
+            "Nenhuma track sobreviveu aos filtros "
+            "(PDG ∈ {π,K,p}, EdepDet0 > 10 keV, p > 0.5 GeV/c). "
+            "Verificar compatibilidade dos ficheiros ROOT."
+        )
 
     pdg_sel = pdg[mask]
     y = np.zeros(mask.sum(), dtype=int)
@@ -1009,6 +1046,12 @@ if __name__ == "__main__":
     print("Classificador ML para PID  (v3)")
     print("=" * 60)
 
+    # ------------------------------------------------------------------
+    # Verificação de pré-requisitos — termina com mensagem clara se os
+    # ficheiros ROOT não estiverem presentes em data/
+    # ------------------------------------------------------------------
+    verificar_ficheiros()
+
     # --- leitura ---
     print("\n[1/5] A carregar dados...")
     X, y = carregar_dados()
@@ -1148,4 +1191,36 @@ if __name__ == "__main__":
         titulo=f"Curvas de aprendizagem — Fase 2 (π vs p, p ∈ [{P_MIN}, {P_MAX}] GeV/c)",
     )
 
-    print("\nDone. Todos os gráficos guardados em:", OUTPUT_DIR)
+    # ------------------------------------------------------------------
+    # Confirmar outputs gerados
+    # ------------------------------------------------------------------
+    print("\n" + "=" * 55)
+    print(f"  Gráficos gerados em: {OUTPUT_DIR}")
+    print("=" * 55)
+    esperados = [
+        "ml_roc_curve.png",
+        "ml_feature_importance.png",
+        "ml_decision_boundary.png",
+        "ml_cv_scores.png",
+        "ml_efficiency_purity.png",
+        "ml_auc_vs_momentum.png",
+        "ml_learning_curves_fase1.png",
+        "ml_binary_roc.png",
+        "ml_binary_cv.png",
+        "ml_binary_effpur.png",
+        "ml_binary_features.png",
+        "ml_binary_boundary.png",
+        "ml_learning_curves_fase2.png",
+    ]
+    ausentes = []
+    for nome in esperados:
+        caminho = os.path.join(OUTPUT_DIR, nome)
+        if os.path.isfile(caminho):
+            print(f"  [OK] {nome}")
+        else:
+            print(f"  [EM FALTA] {nome}")
+            ausentes.append(nome)
+    if ausentes:
+        print(f"\n[AVISO] {len(ausentes)} ficheiro(s) em falta — verificar erros acima.")
+    else:
+        print(f"\nTodos os {len(esperados)} gráficos gerados com sucesso.")

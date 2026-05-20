@@ -18,6 +18,7 @@ Analises incluidas:
 """
 
 import os
+import sys
 import math
 import array as arr
 import ROOT
@@ -39,11 +40,37 @@ OUTPUT_DIR = "plots/energy"
 EV_TO_MEV = 1e-6
 
 
+def verificar_ficheiros():
+    """
+    Verifica que todos os ficheiros ROOT estao presentes antes de iniciar a analise.
+    Termina com mensagem clara se algum ficheiro estiver em falta.
+    """
+    em_falta = [f for f in DATA_FILES if not os.path.isfile(f)]
+    if em_falta:
+        print("[ERRO] Ficheiros ROOT em falta:")
+        for f in em_falta:
+            print("  - {}".format(f))
+        print()
+        print("Instrucoes: copiar os ficheiros .root para a pasta data/")
+        print("Ver data/README.md para mais informacoes.")
+        sys.exit(1)
+    print("[OK] Todos os {} ficheiros ROOT encontrados.".format(len(DATA_FILES)))
+
+
 def carregar_chain(tree_name):
-    """Carrega uma TTree de todos os runs numa TChain."""
+    """
+    Carrega uma TTree de todos os runs numa TChain.
+    Verifica que a chain nao esta vazia antes de devolver.
+    """
     chain = ROOT.TChain(tree_name)
     for f in DATA_FILES:
         chain.Add(f)
+    n = chain.GetEntries()
+    if n == 0:
+        print("[AVISO] TChain '{}' esta vazia — nenhum evento encontrado.".format(tree_name))
+        print("        Verifique se o nome da TTree e correcto e se os ficheiros ROOT sao validos.")
+    else:
+        print("[OK] TChain '{}' carregada: {:,} entradas.".format(tree_name, n))
     return chain
 
 
@@ -1555,6 +1582,12 @@ def plot_dedx_mpv_vs_momentum():
 
 
 if __name__ == "__main__":
+    # ------------------------------------------------------------------
+    # Verificacao de prerequisitos — termina com mensagem clara se os
+    # ficheiros ROOT nao estiverem presentes em data/
+    # ------------------------------------------------------------------
+    verificar_ficheiros()
+
     plot_beam_composition()
     plot_energy_deposition_per_detector()
     plot_energy_per_particle_per_detector()
@@ -1567,6 +1600,56 @@ if __name__ == "__main__":
     plot_mpv_pioes_vs_protoes()
     plot_detectors_overlay()
     plot_dedx_vs_momentum()
+    plot_resolution_per_species()
+    plot_run_consistency()
+    plot_dedx_with_bethe_bloch()
+    plot_landau_overlay()
+    plot_dedx_mpv_vs_momentum()
+
+    # ------------------------------------------------------------------
+    # Confirmar outputs gerados
+    # ------------------------------------------------------------------
+    print("\n" + "=" * 55)
+    print("  Graficos gerados em: {}".format(OUTPUT_DIR))
+    print("=" * 55)
+    esperados = [
+        "composicao_feixe.png",
+        "edep_detector0.png", "edep_detector1.png",
+        "edep_detector2.png", "edep_detector3.png",
+        "edep_por_particula_detector0.png",
+        "edep_por_particula_detector1.png",
+        "edep_por_particula_detector2.png",
+        "edep_por_particula_detector3.png",
+        "edep_total_por_particula.png",
+        "landau_pioes_detector0.png", "landau_pioes_detector1.png",
+        "landau_pioes_detector2.png", "landau_pioes_detector3.png",
+        "mpv_vs_detector.png", "sigma_vs_detector.png",
+        "landau_protoes_detector0.png", "landau_protoes_detector1.png",
+        "landau_protoes_detector2.png", "landau_protoes_detector3.png",
+        "landau_kaoes_detector0.png", "landau_kaoes_detector1.png",
+        "landau_kaoes_detector2.png", "landau_kaoes_detector3.png",
+        "mpv_vs_massa.png",
+        "mpv_pioes_vs_protoes.png",
+        "deposicao_energia_4detetores.png",
+        "dedx_vs_momentum.png",
+        "resolucao_por_especie.png",
+        "consistencia_runs.png",
+        "dedx_vs_momentum_bethe_bloch.png",
+        "landau_overlay_pi_k_p.png",
+        "dedx_mpv_vs_momentum.png",
+    ]
+    ausentes = []
+    for nome in esperados:
+        caminho = os.path.join(OUTPUT_DIR, nome)
+        if os.path.isfile(caminho):
+            print("  [OK] {}".format(nome))
+        else:
+            print("  [EM FALTA] {}".format(nome))
+            ausentes.append(nome)
+    if ausentes:
+        print("\n[AVISO] {} ficheiro(s) em falta — verificar erros acima.".format(len(ausentes)))
+    else:
+        print("\nTodos os {} graficos gerados com sucesso.".format(len(esperados)))
     plot_resolution_per_species()
     plot_landau_overlay()
     plot_run_consistency()
