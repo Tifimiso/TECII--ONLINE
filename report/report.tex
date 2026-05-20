@@ -164,22 +164,27 @@ distribuídos pelos quatro runs.
   \end{tabular}
 \end{table}
 
-O feixe é dominado por fundo electromagnético: $e^\pm$ e $\gamma$ representam
-conjuntamente $78.2\%$ do total de tracks. Os piões ($15.3\%$), que constituem
-o sinal hadrónico primário do experimento AMBER para o estudo da estrutura do
-pião, e os protões ($5.2\%$) são as componentes de maior interesse físico.
-A presença de muões ($0.2\%$) é residual e resulta do decaimento de piões em
-voo ($\pi^\pm \to \mu^\pm + \nu_\mu$).
+A tabela mostra a composição de \textit{todas} as tracks registadas na simulação,
+incluindo partículas secundárias produzidas nas interações dentro do alvo.
+Utilizando o campo \texttt{IsPrimary} da árvore \texttt{tracksData}, verifica-se
+que apenas $3\,485$ das $3\,373\,258$ tracks totais são primárias ($0.1\%$) ---
+e estas são \textit{exclusivamente} piões carregados, consistente com o AMBER
+operar com um feixe de piões do SPS. As restantes $99.9\%$ das tracks são
+secundárias, produzidas nas interações hadrônicas e electromagnéticas dos piões
+primários no interior do alvo activo.
 
-\textbf{Nota:} a árvore \texttt{tracksData} regista todas as tracks produzidas
-na simulação, incluindo partículas secundárias geradas nas interações dentro
-do alvo, não apenas as partículas do feixe primário. A fracção de $51.3\%$ de
-$e^\pm$ é anomalamente elevada para um feixe hadrónico do SPS e sugere que
-uma parte significativa destas tracks são secundárias de natureza electromagnética
-(produzidas por radiação de bremsstrahlung e criação de pares). A ausência de
-um campo \texttt{IsPrimary} na árvore \texttt{tracksData} impede a separação
-directa entre partículas primárias e secundárias nesta análise, o que constitui
-uma limitação relevante na interpretação da composição do feixe.
+A dominância de $e^\pm$ ($51.3\%$) e $\gamma$ ($26.5\%$) reflecte a produção
+de cascatas electromagnéticas secundárias por radiação de \textit{bremsstrahlung}
+e criação de pares --- não uma contaminação do feixe primário. Os protões
+($5.1\%$) e kaões ($1.0\%$) são secundários de interações hadrônicas inelásticas;
+os muões ($0.2\%$) resultam do decaimento de piões secundários em voo
+($\pi^\pm \to \mu^\pm + \nu_\mu$). A proporção de piões secundários ($14.9\%$
+do total) reflecte a produção de piões nas cascatas hadrônicas, em adição aos
+$0.1\%$ do feixe primário.
+
+Em termos de feixe primário, a simulação representa fielmente o AMBER: um feixe
+puro de $\pi^\pm$ que interage num alvo activo espesso, gerando uma multiplicidade
+de $\sim 1000$ partículas secundárias por pião incidente.
 
 \subsubsection{Deposição de energia por detetor}
 
@@ -677,9 +682,11 @@ processos físicos de interação de partículas carregadas com matéria, valida
 o modelo Geant4 utilizado. Os pontos principais são:
 
 \begin{enumerate}
-  \item O feixe simulado é dominado por fundo electromagnético ($e^\pm$ e $\gamma$,
-    $78\%$), com piões ($15\%$) e protões ($5\%$) como componentes hadrónicas
-    principais. Os muões — sinal de interesse do AMBER — representam apenas $0.2\%$.
+  \item O feixe primário é constituído exclusivamente por $\pi^\pm$ ($3\,485$
+    tracks, $0.1\%$ do total). As restantes $99.9\%$ das tracks são secundárias:
+    $e^\pm$ ($51.3\%$) e $\gamma$ ($26.5\%$) de cascatas electromagnéticas,
+    piões secundários ($14.9\%$) de interações hadrônicas, e protões, kaões e
+    muões de origem secundária.
   \item A distribuição de Landau foi ajustada com sucesso para piões, kaões e
     protões, confirmando que o detetor opera no regime de partícula mínimamente
     ionizante para piões relativistas.
