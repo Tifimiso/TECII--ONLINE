@@ -32,7 +32,7 @@
 \maketitle
 
 \begin{abstract}
-Este trabalho apresenta a simulação e análise do detector AMBER Target
+Este trabalho apresenta a simulação e análise do detetor AMBER Target
 (CERN SPS) usando o \textit{framework} Geant4, com análise estatística
 sobre quatro ficheiros ROOT totalizando $3.31 \times 10^6$ \textit{tracks}.
 O trabalho está organizado em cinco componentes complementares:
@@ -48,9 +48,10 @@ primários e secundários no alvo activo;
 (4)~\textbf{distribuição temporal} — análise dos tempos de chegada dos hits;
 (5)~\textbf{distribuição do momento} — espectro de momento das partículas
 secundárias produzidas.
-Os resultados validam o modelo de simulação e demonstram quantitativamente
+Os resultados são consistentes com o comportamento físico esperado da
+ionização de partículas carregadas em silício e permitem quantificar
 os limites intrínsecos da identificação de partículas por perda de energia,
-confirmando a necessidade de detectores RICH para a separação $\pi/K$ no
+confirmando a necessidade de detetores RICH para a separação $\pi/K$ no
 regime de alto momento.
 \end{abstract}
 
@@ -102,8 +103,8 @@ de um membro do grupo:
 A análise foi efectuada sobre quatro ficheiros ROOT de simulação independentes
 (AmberTarget\_Run\_0 a Run\_3), totalizando $3.31 \times 10^6$ tracks, combinados
 com \texttt{TChain} para maximizar a estatística disponível. Os resultados
-permitem validar a simulação e quantificar a capacidade de identificação de
-partículas do detector AMBER Target.
+permitem avaliar a consistência da análise com a física esperada e quantificar
+a capacidade de identificação de partículas do detetor AMBER Target.
 
 %=============================================================================
 \section{Dados e Metodologia}
@@ -376,11 +377,11 @@ comparação directa das formas e posições dos picos.
 \end{figure}
 
 Este gráfico evidencia dois aspectos fundamentais da capacidade de separação
-por dE/dx neste detector. Por um lado, a separação entre piões e kaões é
+por dE/dx neste detetor. Por um lado, a separação entre piões e kaões é
 praticamente inviável: a diferença de MPV é de apenas $\SI{24}{keV}$ ($\sim 1.7\%$),
 muito inferior à largura das distribuições ($\sigma_\pi \approx \SI{84}{keV}$).
 Por outro lado, a separação entre piões (ou kaões) e protões é mais favorável —
-diferença de MPV de $\sim 31\%$ —, mas ainda insuficiente para PID eficiente
+diferença de MPV de $\sim 33\%$ —, mas ainda insuficiente para PID eficiente
 com um único detetor, como quantificado na Secção~\ref{sec:resolucao}.
 
 \subsubsection{Evolução do MPV ao longo dos detetores}
@@ -483,7 +484,7 @@ função da massa da partícula, usando o detetor~0 como referência.
 
 Os resultados são coerentes com a equação~(\ref{eq:bethe}): o MPV aumenta de
 $1.44~\text{MeV}$ para piões ($m = 139.6~\text{MeV}/c^2$) para $1.91~\text{MeV}$
-para protões ($m = 938.3~\text{MeV}/c^2$), uma diferença de $\sim 31\%$.
+para protões ($m = 938.3~\text{MeV}/c^2$), uma diferença de $\sim 33\%$.
 Os kaões ($m = 493.7~\text{MeV}/c^2$, MPV $= 1.46~\text{MeV}$) são intermédios
 mas mais próximos dos piões. Este comportamento é explicado pelo parâmetro
 $\beta\gamma = p/(mc)$: a $p = 0.5~\text{GeV}/c$, os piões têm $\beta\gamma \approx
@@ -534,7 +535,7 @@ secção~\ref{sec:dedx_mpv}.
 a Figura~\ref{fig:dedx_bb} sobrepõe os dados simulados com as curvas
 teóricas de Bethe-Bloch calculadas para silício ($Z = 14$, $A = 28.09~\text{g/mol}$,
 $I = 173~\text{eV}$, $\rho = 2.329~\text{g/cm}^3$, PDG 2022~\cite{pdg2022}),
-sem correcção de densidade (válida para $p \lesssim 10~\text{GeV}/c$ neste detector).
+sem correcção de densidade (válida para $p \lesssim 10~\text{GeV}/c$ neste detetor).
 
 \begin{figure}[H]
   \centering
@@ -685,7 +686,7 @@ $\sigma_K \approx \SI{105}{keV}$). Esta limitação é bem conhecida em física 
 partículas: a separação $\pi/K$ por dE/dx só é viável a baixo momento
 ($p \lesssim 0.5~\text{GeV}/c$), onde as curvas de Bethe-Bloch ainda divergem
 significativamente. É precisamente por esta razão que o experimento AMBER dispõe
-de detectores RICH (\textit{Ring Imaging Cherenkov}) para identificação de piões
+de detetores RICH (\textit{Ring Imaging Cherenkov}) para identificação de piões
 e kaões no regime de alto momento.
 
 \textbf{Limitação do corte de momento para protões:} o filtro $p > 0.5~\text{GeV}/c$
@@ -1013,7 +1014,7 @@ Em síntese, o classificador de aprendizagem automática confirma e quantifica
 os resultados da análise de Bethe-Bloch: a separação $\pi/p$ é eficaz
 (AUC $= 0.93$), a separação $K/p$ é razoável (AUC $= 0.73$) e a separação
 $\pi/K$ é fisicamente impossível por dE/dx a este regime de momento ---
-justificando o uso de detectores RICH no experimento AMBER.
+justificando o uso de detetores RICH no experimento AMBER.
 
 \subsubsection{Curva eficiência-pureza e pontos de operação}
 
@@ -1398,7 +1399,7 @@ dados de calibração do AMBER Target.
 \section{Conclusão}
 %=============================================================================
 
-Este trabalho apresentou a simulação e análise do detector AMBER Target usando
+Este trabalho apresentou a simulação e análise do detetor AMBER Target usando
 Geant4, com análise em macros ROOT e Python (\texttt{uproot}/\texttt{scikit-learn}),
 sobre dados de quatro runs independentes totalizando
 $3.31 \times 10^6$ tracks ($3\,311\,783$).
@@ -1434,7 +1435,7 @@ A separação $\pi^\pm$ vs $K^\pm$ é praticamente nula ($N_\sigma \approx 0.18$
 a $p > 0.5~\text{GeV}/c$, ambas as espécies convergem para o mínimo de ionização
 da curva de Bethe-Bloch e a diferença de MPV ($\SI{25}{keV}$) é muito inferior
 à largura das distribuições. Este resultado confirma que a identificação
-$\pi/K$ a alto momento requer detectores RICH, como efectivamente implementado
+$\pi/K$ a alto momento requer detetores RICH, como efectivamente implementado
 no AMBER.
 
 \textbf{Identificação por aprendizagem automática.}
@@ -1447,7 +1448,7 @@ decresce de $\approx 0.99$ a $p < 1~\text{GeV}/c$ para $\approx 0.53$
 de Bethe-Bloch prevê que as curvas de dE/dx das duas espécies convergem.
 O método de ML confirma quantitativamente os limites já identificados pela
 análise analítica: a separação $\pi/K$ é fisicamente inviável por dE/dx a este
-regime de momento, reforçando a necessidade de detectores RICH para PID
+regime de momento, reforçando a necessidade de detetores RICH para PID
 completo. Estes resultados constituem uma demonstração, à escala académica
 e em dados de simulação, do mesmo princípio físico que fundamenta os sistemas
 de PID por aprendizagem automática em uso no LHCb e no ALICE.
@@ -1457,7 +1458,7 @@ de PID por aprendizagem automática em uso no LHCb e no ALICE.
 Em conjunto, os resultados obtidos reproduzem o comportamento esperado da física
 de ionização de partículas carregadas em silício, validam a consistência do
 pipeline de análise e fornecem uma base quantitativa para a compreensão da
-resposta do detector AMBER Target — incluindo a caracterização da produção de
+resposta do detetor AMBER Target — incluindo a caracterização da produção de
 partículas secundárias no alvo activo e os limites intrínsecos da identificação
 de partículas por perda de energia.
 
