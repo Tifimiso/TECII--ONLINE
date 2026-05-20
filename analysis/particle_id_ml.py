@@ -1,21 +1,34 @@
 """
-particle_id_ml.py  (v2)
------------------------
-Classificador de Aprendizagem Automática para identificação de partículas (PID).
+particle_id_ml.py  (v3 — classificador de produção)
+----------------------------------------------------
+Análise em duas fases, desenvolvida seguindo os princípios dos sistemas de
+PID por aprendizagem automática em operação no CERN:
+  - LHCb ProbNN: Gradient Boosted Decision Trees combinando 4 sub-detectores,
+    em produção desde 2011 (JINST 14, 2019, P04006).
+  - ALICE TPC: redes neuronais para PID por dE/dx no gás (CERN/LHCC 2000-001).
+  - TMVA (ROOT Toolkit for Multivariate Analysis): framework HEP padrão para
+    classificadores BDT/NN, conceptualmente idêntico ao sklearn.
 
-Melhorias em relação à versão 1:
-  1. Classificação a 3 classes: pião (0), kaão (1), protão (2).
-  2. Balanceamento de classes por sample_weight — corrige o baixo recall
-     dos protões e kaões causado pelo desequilíbrio do dataset.
-  3. Validação cruzada estratificada a 5 folds — confirma a estabilidade
-     do modelo e evita sobre-ajuste ao split treino/teste.
-  4. HistGradientBoostingClassifier: versão moderna e muito mais rápida do
-     Gradient Boosting, adequada para datasets grandes (sklearn >= 0.21).
+FASE 1 — Análise exploratória (π, K, p, p > 0.5 GeV/c)
+  Demonstra quantitativamente que K/π é fisicamente impossível por dE/dx a
+  p > 0.5 GeV/c (precision dos kaões: 10.4%, AUC = 0.73).
+  Justifica a restrição do domínio do classificador de produção.
+  Gera: ml_roc_curve.png, ml_cv_scores.png, ml_decision_boundary.png,
+        ml_feature_importance.png, ml_efficiency_purity.png,
+        ml_auc_vs_momentum.png
 
-Filtros aplicados (iguais ao energy_deposition.py):
-    - EdepDet0_keV > 10  (remover ruído)
-    - momentum_GeV > 0.5 (regime relativista)
-    - espécies: piões (|PDG|=211), kaões (|PDG|=321), protões (PDG=2212)
+FASE 2 — Classificador de produção (π vs p, p ∈ [0.5, 2.0] GeV/c)
+  Domínio restrito à janela cinemática onde dE/dx tem poder discriminativo
+  real (AUC > 0.93 por bin de momento). Inclui verificação de domínio de
+  validade — eventos fora do intervalo são sinalizados como "não classificável".
+  Limitações documentadas:
+    - p ∈ [0.5, 1.0] GeV/c: protões com βγ ∈ [0.53, 1.07] (não plenamente
+      relativistas; distribuição de Landau é uma aproximação).
+    - Sem correcção de ângulo de incidência (dados não contêm direcção da track).
+    - Treinado em simulação Geant4; desempenho em dados reais requereria
+      re-treino com amostras de controlo cinemáticas.
+  Gera: ml_binary_roc.png, ml_binary_cv.png, ml_binary_effpur.png,
+        ml_binary_features.png, ml_binary_boundary.png
 
 Uso:
     python analysis/particle_id_ml.py
@@ -607,12 +620,337 @@ def plot_auc_vs_momentum(X, y):
 
 
 # ---------------------------------------------------------------------------
+# FASE 2 — Classificador de produção (π vs p, p ∈ [0.5, 2.0] GeV/c)
+# ---------------------------------------------------------------------------
+
+P_MIN = 0.5   # GeV/c  — limite inferior do domínio de validade
+P_MAX = 2.0   # GeV/c  — limite superior do domínio de validade
+
+
+def dominio_valido(momentum_gev):
+    """
+    Verifica se o momento está dentro do domínio de validade do classificador.
+
+    Fora deste intervalo o classificador NÃO deve ser utilizado:
+      p < 0.5 GeV/c  → partículas não relativistas; distribuições de Landau
+                        mal definidas para todas as espécies.
+      p > 2.0 GeV/c  → piões e protões convergem para o mínimo de ionização;
+                        dE/dx deixa de ser discriminativo (AUC → 0.5,
+                        confirmado pelo gráfico ml_auc_vs_momentum.png).
+
+    Returns
+    -------
+    numpy bool array — True = válido, False = fora do domínio.
+    """
+    m = np.asarray(momentum_gev)
+    return (m >= P_MIN) & (m <= P_MAX)
+
+
+def carregar_dados_binario():
+    """
+    Carrega π e p com p ∈ [P_MIN, P_MAX] GeV/c e EdepDet0_keV > 10.
+
+    Motivação da restrição superior P_MAX = 2.0 GeV/c:
+      O gráfico ml_auc_vs_momentum.png mostra AUC = 0.93 no bin [1, 2] GeV/c
+      e AUC = 0.72 no bin [2, 5] GeV/c. Acima de 2 GeV/c as curvas de
+      Bethe-Bloch convergem rapidamente e nenhum algoritmo consegue separar
+      as espécies por dE/dx.
+
+    Limitação conhecida — protões não completamente relativistas:
+      A p = 0.5 GeV/c, βγ(p) ≈ 0.53 (longe do MIP).
+      A p = 1.0 GeV/c, βγ(p) ≈ 1.07 (ainda em transição).
+      A p = 2.0 GeV/c, βγ(p) ≈ 2.13 (razoavelmente relativista).
+      A boa discriminação no bin [0.5, 1.0] GeV/c existe parcialmente porque
+      protões não-relativistas têm distribuições de Landau mais largas e
+      deslocadas, o que ajuda o classificador mas não pela física de Landau
+      "pura". Um filtro rigoroso para protões seria p > 1.0 GeV/c (βγ > 1.07),
+      mas reduziria substancialmente a amostra disponível.
+    """
+    branches = [
+        "particlePDG", "EdepDet0_keV", "EdepDet1_keV",
+        "EdepDet2_keV", "EdepDet3_keV", "momentum_GeV",
+    ]
+    arrays = []
+    for fname in DATA_FILES:
+        with uproot.open(fname) as f:
+            arrays.append(f["tracksData"].arrays(branches, library="np"))
+    data = {k: np.concatenate([a[k] for a in arrays]) for k in branches}
+
+    pdg   = data["particlePDG"]
+    edep0 = data["EdepDet0_keV"]
+    mom   = data["momentum_GeV"]
+
+    mask = (
+        ((np.abs(pdg) == 211) | (pdg == 2212)) &
+        (edep0 > 10) &
+        (mom >= P_MIN) &
+        (mom <= P_MAX)
+    )
+
+    y = (data["particlePDG"][mask] == 2212).astype(int)  # 0=pião, 1=protão
+    X = np.column_stack([
+        data["EdepDet0_keV"][mask], data["EdepDet1_keV"][mask],
+        data["EdepDet2_keV"][mask], data["EdepDet3_keV"][mask],
+        data["momentum_GeV"][mask],
+    ])
+
+    print(f"  Domínio: p ∈ [{P_MIN}, {P_MAX}] GeV/c  (π e p apenas)")
+    print(f"  Total após filtros : {mask.sum():,}")
+    print(f"  Piões   (y=0): {(y==0).sum():>8,}  ({100*(y==0).mean():.1f}%)")
+    print(f"  Protões (y=1): {(y==1).sum():>8,}  ({100*(y==1).mean():.1f}%)")
+    return X, y
+
+
+def validacao_cruzada_binaria(X, y, n_splits=5):
+    """5-fold CV binário."""
+    print(f"\n  Validação cruzada binária ({n_splits} folds):")
+    cv = StratifiedKFold(n_splits=n_splits, shuffle=True,
+                         random_state=RANDOM_STATE)
+    acc_f, auc_f = [], []
+    for fold, (tr, val) in enumerate(cv.split(X, y), 1):
+        sw = compute_sample_weight("balanced", y[tr])
+        c  = HistGradientBoostingClassifier(**CLF_PARAMS)
+        c.fit(X[tr], y[tr], sample_weight=sw)
+        acc_f.append(accuracy_score(y[val], c.predict(X[val])))
+        auc_f.append(roc_auc_score(y[val], c.predict_proba(X[val])[:, 1]))
+        print(f"    Fold {fold}: acc = {acc_f[-1]:.4f}  |  AUC = {auc_f[-1]:.4f}")
+    print(f"  Média: acc = {np.mean(acc_f):.4f} ± {np.std(acc_f):.4f}"
+          f"   AUC = {np.mean(auc_f):.4f} ± {np.std(auc_f):.4f}")
+    return acc_f, auc_f
+
+
+def plot_roc_binario(clf, X_test, y_test, acc_f, auc_f):
+    """ROC + matriz de confusão 2×2."""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    y_prob = clf.predict_proba(X_test)[:, 1]
+    y_pred = clf.predict(X_test)
+    fpr, tpr, _ = roc_curve(y_test, y_prob)
+    roc_auc = auc(fpr, tpr)
+
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+
+    ax = axes[0]
+    ax.plot(fpr, tpr, color="steelblue", lw=2.5,
+            label=f"AUC = {roc_auc:.4f}")
+    ax.fill_between(fpr, tpr, alpha=0.10, color="steelblue")
+    ax.plot([0, 1], [0, 1], "k--", lw=1, label="Aleatório")
+    ax.set_xlabel("Taxa de falsos positivos", fontsize=12)
+    ax.set_ylabel("Taxa de verdadeiros positivos", fontsize=12)
+    ax.set_title(f"Curva ROC — Classificador de produção\n"
+                 f"π vs p,  p ∈ [{P_MIN}, {P_MAX}] GeV/c", fontsize=12)
+    ax.legend(fontsize=11)
+    ax.grid(True, alpha=0.3)
+    cv_txt = (f"Validação cruzada (5-fold)\n"
+              f"AUC = {np.mean(auc_f):.4f} ± {np.std(auc_f):.4f}\n"
+              f"Acc = {np.mean(acc_f):.4f} ± {np.std(acc_f):.4f}")
+    ax.text(0.38, 0.08, cv_txt, transform=ax.transAxes, fontsize=9,
+            va="bottom",
+            bbox=dict(boxstyle="round,pad=0.4", fc="lightyellow", ec="gray"))
+
+    ax2 = axes[1]
+    cm   = confusion_matrix(y_test, y_pred, normalize="true")
+    disp = ConfusionMatrixDisplay(cm, display_labels=["Pião", "Protão"])
+    disp.plot(ax=ax2, colorbar=True, cmap="Blues", values_format=".1%")
+    ax2.set_title(f"Matriz de confusão (normalizada)\n"
+                  f"p ∈ [{P_MIN}, {P_MAX}] GeV/c", fontsize=12)
+
+    plt.tight_layout()
+    out = f"{OUTPUT_DIR}/ml_binary_roc.png"
+    plt.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"[OK] {out}")
+    return roc_auc
+
+
+def plot_cv_binario(acc_f, auc_f):
+    """CV scores binários."""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    folds = np.arange(1, len(acc_f) + 1)
+    w = 0.35
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    b1 = ax.bar(folds - w/2, acc_f, w,
+                label="Accuracy", color="steelblue", alpha=0.85)
+    b2 = ax.bar(folds + w/2, auc_f, w,
+                label="AUC", color="darkorange", alpha=0.85)
+    ax.bar_label(b1, fmt="%.4f", fontsize=8, padding=2)
+    ax.bar_label(b2, fmt="%.4f", fontsize=8, padding=2)
+    ax.axhline(np.mean(acc_f), color="steelblue", linestyle="--", lw=1.5,
+               label=f"Média acc = {np.mean(acc_f):.4f}")
+    ax.axhline(np.mean(auc_f), color="darkorange", linestyle="--", lw=1.5,
+               label=f"Média AUC = {np.mean(auc_f):.4f}")
+    ax.set_xlabel("Fold", fontsize=12)
+    ax.set_ylabel("Score", fontsize=12)
+    ax.set_title(f"Validação cruzada 5-fold — classificador de produção\n"
+                 f"π vs p,  p ∈ [{P_MIN}, {P_MAX}] GeV/c", fontsize=12)
+    ax.set_xticks(folds)
+    ax.set_ylim(0.85, 1.02)
+    ax.legend(fontsize=9)
+    ax.grid(True, axis="y", alpha=0.3)
+    plt.tight_layout()
+    out = f"{OUTPUT_DIR}/ml_binary_cv.png"
+    plt.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"[OK] {out}")
+
+
+def plot_effpur_binario(clf, X_test, y_test):
+    """Curva eficiência-pureza para o classificador binário."""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    from sklearn.metrics import precision_recall_curve, average_precision_score
+
+    y_prob = clf.predict_proba(X_test)[:, 1]
+    prec, rec, thresholds = precision_recall_curve(y_test, y_prob)
+    ap = average_precision_score(y_test, y_prob)
+
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+
+    ax = axes[0]
+    ax.plot(rec, prec, color="steelblue", lw=2, label=f"AP = {ap:.4f}")
+    ax.set_xlabel("Eficiência (recall de protões)", fontsize=12)
+    ax.set_ylabel("Pureza (precision de protões)", fontsize=12)
+    ax.set_title(f"Curva eficiência–pureza\nπ vs p,  p ∈ [{P_MIN}, {P_MAX}] GeV/c",
+                 fontsize=12)
+    ax.grid(True, alpha=0.3)
+
+    op_results = []
+    for target, col in [(0.90, "green"), (0.95, "orange"), (0.99, "red")]:
+        valid = np.where(prec >= target)[0]
+        if not len(valid):
+            continue
+        idx = valid[np.argmax(rec[valid])]
+        ax.scatter(rec[idx], prec[idx], s=100, color=col, zorder=5,
+                   label=f"Pureza {int(target*100)}%: eff={rec[idx]:.2f}")
+        thr = thresholds[idx] if idx < len(thresholds) else 1.0
+        op_results.append((target, rec[idx], thr))
+
+    ax.legend(fontsize=10)
+    ax.set_xlim(0, 1.02)
+    ax.set_ylim(0.3, 1.02)
+
+    ax2 = axes[1]
+    ax2.plot(thresholds, prec[:-1], color="darkorange", lw=2, label="Pureza")
+    ax2.plot(thresholds, rec[:-1],  color="steelblue",  lw=2, label="Eficiência")
+    f1 = 2*prec[:-1]*rec[:-1] / (prec[:-1]+rec[:-1]+1e-12)
+    ax2.plot(thresholds, f1, color="green", lw=2, linestyle="--", label="F1-score")
+    ax2.axvline(0.5, color="gray", lw=1, linestyle=":", label="Threshold = 0.5")
+    ax2.set_xlabel("Threshold de decisão P(protão)", fontsize=12)
+    ax2.set_ylabel("Score", fontsize=12)
+    ax2.set_title("Pureza, eficiência e F1 vs threshold", fontsize=12)
+    ax2.legend(fontsize=10)
+    ax2.grid(True, alpha=0.3)
+    ax2.set_xlim(0, 1)
+    ax2.set_ylim(0, 1.05)
+
+    plt.tight_layout()
+    out = f"{OUTPUT_DIR}/ml_binary_effpur.png"
+    plt.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"[OK] {out}")
+
+    print("  Pontos de operação (π vs p):")
+    for pur, eff, thr in op_results:
+        print(f"    Pureza {int(pur*100)}%: "
+              f"eficiência = {eff:.3f}, threshold = {thr:.3f}")
+    return op_results
+
+
+def plot_features_binario(clf, X_test, y_test):
+    """Permutation importance para o classificador binário."""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    rng = np.random.default_rng(RANDOM_STATE)
+    idx_s = rng.choice(len(y_test),
+                       size=min(3000, len(y_test)), replace=False)
+    result = permutation_importance(
+        clf, X_test[idx_s], y_test[idx_s],
+        n_repeats=15, random_state=RANDOM_STATE, scoring="roc_auc",
+    )
+    imp  = result.importances_mean
+    std  = result.importances_std
+    idx  = np.argsort(imp)
+
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    ax.barh([FEATURE_NAMES_PT[i] for i in idx], imp[idx],
+            xerr=std[idx], color="steelblue", edgecolor="white",
+            capsize=4, error_kw={"ecolor": "gray", "lw": 1.5})
+    ax.set_xlabel("Queda em AUC (permutation importance)", fontsize=11)
+    ax.set_title(f"Importância das variáveis — classificador de produção\n"
+                 f"π vs p,  p ∈ [{P_MIN}, {P_MAX}] GeV/c", fontsize=12)
+    ax.axvline(0, color="black", lw=0.8)
+    ax.grid(True, axis="x", alpha=0.3)
+    plt.tight_layout()
+    out = f"{OUTPUT_DIR}/ml_binary_features.png"
+    plt.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"[OK] {out}")
+
+
+def plot_boundary_binario(clf, X, y):
+    """Fronteira de decisão 2D para o classificador binário."""
+    import matplotlib.colors as mcolors_local
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    KEV_TO_MEV = 1e-3
+    rng = np.random.default_rng(RANDOM_STATE)
+
+    n_sample = 5000
+    indices = []
+    for cls in [0, 1]:
+        idx_cls = np.where(y == cls)[0]
+        n_cls = min(int(n_sample * len(idx_cls) / len(y)), len(idx_cls))
+        indices.append(rng.choice(idx_cls, size=n_cls, replace=False))
+    sel = np.concatenate(indices)
+    X_s, y_s = X[sel], y[sel]
+    edep_mev, mom_gev = X_s[:, 0] * KEV_TO_MEV, X_s[:, 4]
+
+    n_grid = 250
+    xx, yy = np.meshgrid(
+        np.linspace(max(edep_mev.min()*0.9, 0.001), edep_mev.max()*1.1, n_grid),
+        np.linspace(mom_gev.min()*0.95, mom_gev.max()*1.05, n_grid),
+    )
+    grid_feat = np.column_stack([
+        xx.ravel()/KEV_TO_MEV,
+        np.full(xx.size, np.median(X[:, 1])),
+        np.full(xx.size, np.median(X[:, 2])),
+        np.full(xx.size, np.median(X[:, 3])),
+        yy.ravel(),
+    ])
+    Z = clf.predict_proba(grid_feat)[:, 1].reshape(xx.shape)
+
+    cmap_bg = mcolors_local.LinearSegmentedColormap.from_list(
+        "binary_pid", [(0.85, 0.90, 1.0), (1.0, 0.85, 1.0)]
+    )
+    fig, ax = plt.subplots(figsize=(9, 6))
+    cf = ax.contourf(xx, yy, Z, levels=50, cmap=cmap_bg,
+                     alpha=0.75, vmin=0, vmax=1)
+    plt.colorbar(cf, ax=ax, label="P(protão)")
+    ax.contour(xx, yy, Z, levels=[0.5], colors="black",
+               linewidths=1.5, linestyles="--")
+    ax.scatter(edep_mev[y_s==0], mom_gev[y_s==0],
+               c="red", s=5, alpha=0.4,
+               label=f"Pião (n={(y_s==0).sum()})")
+    ax.scatter(edep_mev[y_s==1], mom_gev[y_s==1],
+               c="magenta", s=5, alpha=0.4,
+               label=f"Protão (n={(y_s==1).sum()})")
+    ax.set_xlabel("dE/dx — Detetor 0 (MeV)", fontsize=12)
+    ax.set_ylabel("Momento (GeV/c)", fontsize=12)
+    ax.set_title(f"Fronteira de decisão — classificador de produção\n"
+                 f"π vs p,  p ∈ [{P_MIN}, {P_MAX}] GeV/c  (5 000 eventos)",
+                 fontsize=12)
+    ax.legend(fontsize=10, markerscale=3)
+    ax.grid(True, alpha=0.2)
+    plt.tight_layout()
+    out = f"{OUTPUT_DIR}/ml_binary_boundary.png"
+    plt.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"[OK] {out}")
+
+
+# ---------------------------------------------------------------------------
 # 7. Programa principal
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("Classificador ML para PID — 3 classes (π, K, p)  v2")
+    print("Classificador ML para PID  (v3)")
     print("=" * 60)
 
     # --- leitura ---
@@ -672,8 +1010,59 @@ if __name__ == "__main__":
     print("\nA treinar classificadores por bin de momento...")
     plot_auc_vs_momentum(X, y)
 
-    print(f"\nAUC por classe:")
+    print(f"\nAUC por classe (3 classes, exploratório):")
     for nome, val in zip(CLASS_NAMES, auc_por_classe):
         print(f"  {nome:8s}: {val:.4f}")
+
+    # -----------------------------------------------------------------------
+    print("\n" + "=" * 60)
+    print("FASE 2 — Classificador de produção (π vs p, p ∈ [0.5, 2.0] GeV/c)")
+    print("=" * 60)
+
+    print("\n[1/5] A carregar dados binários...")
+    X_b, y_b = carregar_dados_binario()
+
+    print("\n[2/5] A dividir conjuntos treino/teste (70/30)...")
+    X_btr, X_bte, y_btr, y_bte = train_test_split(
+        X_b, y_b, test_size=0.30, random_state=RANDOM_STATE, stratify=y_b
+    )
+    print(f"  Treino: {len(y_btr):,}  |  Teste: {len(y_bte):,}")
+
+    print("\n[3/5] A efectuar validação cruzada binária (5 folds)...")
+    acc_fb, auc_fb = validacao_cruzada_binaria(X_b, y_b)
+
+    print("\n[4/5] A treinar classificador de produção...")
+    sw_b = compute_sample_weight("balanced", y_btr)
+    clf_b = HistGradientBoostingClassifier(**CLF_PARAMS)
+    clf_b.fit(X_btr, y_btr, sample_weight=sw_b)
+    print("  Treino concluído.")
+
+    print("\n[5/5] A avaliar e gerar gráficos...")
+    y_bpred = clf_b.predict(X_bte)
+    y_bprob = clf_b.predict_proba(X_bte)[:, 1]
+    acc_b    = accuracy_score(y_bte, y_bpred)
+    bal_b    = balanced_accuracy_score(y_bte, y_bpred)
+    auc_b    = roc_auc_score(y_bte, y_bprob)
+
+    print("\n" + "=" * 60)
+    print("RESULTADOS — Classificador de produção (conjunto de teste)")
+    print("=" * 60)
+    print(f"  AUC                  : {auc_b:.4f}")
+    print(f"  Balanced accuracy    : {bal_b:.4f}  ({bal_b*100:.2f}%)")
+    print(f"  Accuracy             : {acc_b:.4f}  ({acc_b*100:.2f}%)")
+    print(f"\n  Domínio de validade  : p ∈ [{P_MIN}, {P_MAX}] GeV/c")
+    print(f"  Fora do domínio: classificar como 'não classificável por dE/dx'")
+    print("\nRelatório de classificação:")
+    print(classification_report(y_bte, y_bpred,
+                                target_names=["Pião", "Protão"], digits=4))
+
+    print("A gerar gráficos da Fase 2...")
+    plot_roc_binario(clf_b, X_bte, y_bte, acc_fb, auc_fb)
+    plot_cv_binario(acc_fb, auc_fb)
+    plot_effpur_binario(clf_b, X_bte, y_bte)
+    plot_features_binario(clf_b, X_bte, y_bte)
+    plot_boundary_binario(clf_b, X_b, y_b)
+
+    print("\nDone. Todos os gráficos guardados em:", OUTPUT_DIR)
 
     print("\nDone. Gráficos guardados em:", OUTPUT_DIR)

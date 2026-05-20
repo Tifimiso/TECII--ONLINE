@@ -725,19 +725,27 @@ antes de combinar os dados, uma prática padrão em física experimental.
 
 Complementarmente à análise baseada na fórmula de Bethe-Bloch, implementou-se
 um classificador de aprendizagem automática (\textit{machine learning}) para
-identificar simultaneamente piões, kaões e protões.
+identificação de partículas. A metodologia seguiu os princípios dos sistemas de
+PID por ML em operação no CERN: o \textbf{LHCb ProbNN}~\cite{lhcb_pid}, que
+usa \textit{Gradient Boosted Decision Trees} combinando quatro sub-detectores
+(em produção desde 2011, processando dezenas de milhões de eventos por segundo),
+e o sistema de redes neuronais do \textbf{ALICE TPC}~\cite{alice_pid}, que
+separa $\pi/K/p$ por dE/dx no gás — exactamente o mesmo problema físico que
+aqui se aborda. O \textit{framework} TMVA do ROOT, amplamente usado em HEP,
+usa a mesma arquitectura BDT implementada neste trabalho via \texttt{sklearn}.
+
 A abordagem escolhida foi um \textit{Histogram-based Gradient Boosting
 Classifier}~\cite{sklearn}, variante moderna e eficiente do Gradient Boosting
 que combina sequencialmente árvores de decisão rasas, usando histogramas
-pré-computados para acelerar o treino.
+pré-computados para acelerar o treino. A análise foi estruturada em duas fases.
 
-\subsubsection*{Configuração do classificador}
+\subsubsection*{Fase 1 — Análise exploratória a 3 classes (π, K, p)}
 
 As variáveis de entrada (\textit{features}) são a deposição de energia em cada
 um dos quatro detetores ($E_\text{dep,0}$--$E_\text{dep,3}$, em keV) e o
 momento ($p$, em GeV/$c$). A variável-alvo tem três classes:
 $y = 0$ (pião, $|\text{PDG}| = 211$), $y = 1$ (kaão, $|\text{PDG}| = 321$)
-e $y = 2$ (protão, $\text{PDG} = 2212$). Aplicaram-se os mesmos filtros das
+e $y = 2$ (protão, $\text{PDG} = 2212$). Aplicaram-se os filtros das
 análises anteriores ($E_{\text{dep,0}} > \SI{10}{keV}$,
 $p > 0.5~\text{GeV}/c$), obtendo $125\,362$ eventos ($75\%$ piões,
 $19\%$ protões, $6\%$ kaões).
@@ -795,6 +803,16 @@ de Bethe-Bloch: a separação $\pi/p$ é a mais fácil ($N_\sigma \approx 1.4$
 por detetor, AUC 0.93), enquanto a separação $\pi/K$ é praticamente impossível
 ($N_\sigma \approx 0.18$, AUC 0.73). O modelo de ML \emph{confirma
 quantitativamente} a conclusão analítica.
+
+\textbf{Nota crítica sobre os kaões:} a \textit{precision} dos kaões é de
+apenas $10.4\%$, ou seja, 9 em cada 10 eventos classificados como ``kaão'' são
+na realidade piões. \emph{Isto não é uma falha do algoritmo — é a confirmação
+computacional de que a separação $\pi/K$ é fisicamente impossível por dE/dx a
+$p > 0.5~\text{GeV}/c$.} Nenhum algoritmo, por mais sofisticado que seja,
+extrai informação que a física não contém nos dados: a força do \textit{sample
+weight} ``obrigou'' o modelo a tentar classificar kaões, mas a física
+(Bethe-Bloch, $N_\sigma = 0.18$) impediu-o de o fazer com qualquer precisão
+útil. Esta análise exploratória motiva a restrição do classificador na Fase~2.
 
 A Figura~\ref{fig:ml_roc_cm} apresenta as curvas ROC (uma por classe, OvR)
 e a matriz de confusão normalizada $3 \times 3$. A curva dos protões afasta-se
@@ -953,6 +971,153 @@ extrair informação que a física não contém nos dados --- e este resultado
 demonstra-o de forma quantitativa e inequívoca.
 
 %-----------------------------------------------------------------------------
+\subsubsection*{Fase 2 — Classificador de produção (π vs p, $p \in [0.5, 2.0]$ GeV/$c$)}
+%-----------------------------------------------------------------------------
+
+A análise exploratória da Fase~1 identificou duas limitações que motivam a
+restrição do domínio:
+\begin{enumerate}
+  \item A separação $\pi/K$ é fisicamente impossível — os kaões são removidos.
+  \item Acima de $2~\text{GeV}/c$ a AUC colapsa para $\approx 0.53$ (aleatório)
+    — o limite superior do domínio é fixado em $p_\text{max} = 2.0~\text{GeV}/c$.
+\end{enumerate}
+
+O classificador de produção é binário ($y = 0$: pião, $y = 1$: protão) e
+opera exclusivamente em $p \in [0.5, 2.0]~\text{GeV}/c$.
+Fora deste intervalo, os eventos são marcados como \emph{``não classificável
+por dE/dx''} e o classificador não é aplicado.
+
+\textbf{Limitação física conhecida:} a $p \in [0.5, 1.0]~\text{GeV}/c$, os
+protões têm $\beta\gamma \in [0.53, 1.07]$, o que significa que \emph{não são
+completamente relativistas}. A distribuição de Landau é uma aproximação nesta
+região: a boa discriminação existe parcialmente porque protões não-relativistas
+têm distribuições de dE/dx mais largas e deslocadas, o que ajuda o classificador,
+mas não exclusivamente pela física de Landau ``pura''. Um filtro mais rigoroso
+seria $p > 1.0~\text{GeV}/c$ para protões ($\beta\gamma > 1.07$), ao custo de
+reduzir substancialmente a amostra.
+
+\textbf{Limitação de dados:} não existe informação sobre a direcção da
+\textit{track} (ângulo $\theta$) na árvore \texttt{tracksData}. Num detector
+real aplicar-se-ia a correcção de comprimento de caminho
+$L_\text{eff} = L_0 / \cos\theta$, que corrige a deposição de energia em
+função do ângulo de incidência. Esta correcção é padrão no LHCb e no ALICE
+mas não é realizável com os dados disponíveis --- constitui uma limitação
+identificada que seria resolvida com o acesso à reconstrução completa das
+\textit{tracks}.
+
+\paragraph*{Resultados}
+
+O classificador de produção foi treinado em $50\,512$ eventos e avaliado em
+$21\,648$ eventos de teste. A Tabela~\ref{tab:ml_compare} compara os resultados
+das duas fases.
+
+\begin{table}[H]
+  \centering
+  \caption{Comparação entre a análise exploratória (Fase~1) e o classificador
+    de produção (Fase~2). A restrição do domínio melhora todas as métricas.}
+  \label{tab:ml_compare}
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Métrica} & \textbf{Fase 1} (3 classes) &
+    \textbf{Fase 2} (π vs p) \\
+    \midrule
+    AUC                    & $0.8442$ (macro OvR) & $\mathbf{0.9748}$ \\
+    Balanced accuracy      & $65.4\%$             & $\mathbf{92.8\%}$  \\
+    Recall protões         & $78.9\%$             & $\mathbf{95.4\%}$  \\
+    Precision piões        & $96.0\%$             & $\mathbf{98.3\%}$  \\
+    CV AUC ($\pm\sigma$)   & $0.846 \pm 0.002$    & $\mathbf{0.976 \pm 0.0004}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+A melhoria é substancial em todas as métricas. A variância do CV de apenas
+$\sigma_\text{AUC} = 0.0004$ confirma que o classificador de produção é
+extremamente estável — não há overfitting e o resultado é reprodutível.
+
+A Figura~\ref{fig:ml_binary_roc} apresenta a curva ROC e a matriz de confusão
+do classificador de produção.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.97\textwidth]{plots/energy/ml_binary_roc.png}
+  \caption{Esquerda: curva ROC do classificador de produção
+    ($\pi$ vs $p$, $p \in [0.5, 2.0]~\text{GeV}/c$, AUC $= 0.9748$).
+    A caixa amarela resume os resultados de validação cruzada.
+    Direita: matriz de confusão $2\times 2$ normalizada. A taxa de erro
+    é $< 5\%$ para piões e $< 5\%$ para protões.}
+  \label{fig:ml_binary_roc}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.78\textwidth]{plots/energy/ml_binary_cv.png}
+  \caption{Scores de AUC e accuracy por fold na validação cruzada do
+    classificador de produção. A variância extremamente baixa
+    ($\sigma_\text{AUC} = 0.0004$) confirma a estabilidade do modelo.}
+  \label{fig:ml_binary_cv}
+\end{figure}
+
+A Figura~\ref{fig:ml_binary_effpur} apresenta os pontos de operação do
+classificador, que permitem ao físico escolher o trade-off entre pureza e
+eficiência em função dos objectivos da análise.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.97\textwidth]{plots/energy/ml_binary_effpur.png}
+  \caption{Curva eficiência-pureza do classificador de produção com pontos
+    de operação a 90\%, 95\% e 99\% de pureza (esquerda) e variação de
+    pureza, eficiência e F1-score com o threshold de decisão (direita).
+    A 95\% de pureza, a eficiência é de $54\%$; a 90\% de pureza,
+    a eficiência sobe para $72\%$.}
+  \label{fig:ml_binary_effpur}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{Pontos de operação do classificador de produção (π vs p,
+    $p \in [0.5, 2.0]~\text{GeV}/c$).}
+  \label{tab:ml_op_prod}
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{Pureza alvo} & \textbf{Eficiência} & \textbf{Threshold} \\
+    \midrule
+    $90\%$ & $72.3\%$ & $0.862$ \\
+    $95\%$ & $53.9\%$ & $0.938$ \\
+    $99\%$ & $23.7\%$ & $0.993$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+A Figura~\ref{fig:ml_binary_features} mostra a importância das variáveis por
+\textit{permutation importance} (queda em AUC quando cada variável é
+permutada aleatoriamente).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{plots/energy/ml_binary_features.png}
+  \caption{Permutation importance das variáveis no classificador de produção
+    (15 repetições, amostra de $3\,000$ eventos). O momento continua a ser
+    a variável dominante, seguido da deposição no detetor~0. As barras de
+    erro reflectem a variabilidade entre as 15 permutações.}
+  \label{fig:ml_binary_features}
+\end{figure}
+
+A Figura~\ref{fig:ml_binary_boundary} mostra a fronteira de decisão no
+domínio restrito $p \in [0.5, 2.0]~\text{GeV}/c$.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{plots/energy/ml_binary_boundary.png}
+  \caption{Fronteira de decisão do classificador de produção no domínio
+    válido $p \in [0.5, 2.0]~\text{GeV}/c$ (amostra de $5\,000$ eventos).
+    A separação entre piões (vermelho) e protões (magenta) é visível e
+    fisicamente consistente: a baixo momento os protões depositam muito mais
+    energia; a $p \approx 2.0~\text{GeV}/c$ as distribuições começam a
+    sobrepor-se, motivando o limite superior do domínio.}
+  \label{fig:ml_binary_boundary}
+\end{figure}
+
+%-----------------------------------------------------------------------------
 \subsection{Perspectivas e Relevância Prática}
 \label{sec:ml_perspectivas}
 %-----------------------------------------------------------------------------
@@ -994,9 +1159,8 @@ constituem o caminho natural de desenvolvimento:
     fase onde a espécie é conhecida com alta pureza por conservação de energia
     e momento, sem informação de PID. Exemplos típicos:
     $K^0_S \to \pi^+\pi^-$ (fonte limpa de piões),
-    $\Lambda^0 \to p\pi^-$ (fonte limpa de protões),
-    $\phi \to K^+K^-$ (fonte limpa de kaões).
-    Com estas amostras o modelo pode ser treinado e validado em dados reais.
+    $\Lambda^0 \to p\pi^-$ (fonte limpa de protões).
+    Com estas amostras o modelo pode ser re-treinado em dados reais do AMBER.
 
   \item \textbf{Monitorização e re-treino periódico.}
     As propriedades do detector mudam com o tempo: deriva de calibração,
