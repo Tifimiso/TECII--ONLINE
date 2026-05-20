@@ -820,23 +820,39 @@ antes de combinar os dados, uma prática padrão em física experimental.
 \subsection{Distribuição do Momento}
 %-----------------------------------------------------------------------------
 
-% ============================================================
-% INSTRUÇÕES PARA O COLEGA RESPONSÁVEL POR ESTA SECÇÃO (José):
-%   - Apresentar o espectro de momento de muões, piões primários e piões
-%     secundários separadamente.
-%   - Comparar com a distribuição esperada do feixe do SPS (pião incidente
-%     a ~280 GeV, secundários produzidos no alvo activo).
-%   - Incluir gráfico de momento vs espécie (usando PDG code).
-%   - Formato sugerido: 2–3 subsubsections + figuras + tabela resumo.
-% ============================================================
+Nesta secção, é apresentada a análise da componente longitudinal do momento ($p_Z$) das partículas detetadas na simulação. A análise foca-se nos muões ($\mu^{\pm}$) e piões ($\pi^{\pm}$), e explora adicionalmente a distinção crucial entre piões primários (gerados na colisão inicial do feixe com o alvo) e secundários (produzidos em interações secundárias ou decaimentos).
 
-\subsubsection{Espectro de momento por espécie}
+De forma a garantir o rigor científico e evitar a duplicação estatística de contagens (uma vez que uma única partícula pode registar múltiplos \textit{hits} ao atravessar sucessivas camadas de detetores), os dados foram extraídos diretamente a nível de trajetória (\textit{track}) através do ramo \texttt{tracksData}. Como os histogramas são apresentados em escala logarítmica, foram considerados apenas valores positivos de $p_Z$.
 
-% Inserir figura e descrição aqui.
+\subsubsection{Comparação entre Muões e Piões}
 
-\subsubsection{Piões primários vs.\ secundários}
+A Figura~\ref{fig:momentum_muons_pions} apresenta os espectros de momento longitudinal $p_Z$ comparativos para muões e piões. Ambas as distribuições são apresentadas em escala logarítmica para permitir a visualização de ordens de grandeza muito distintas na estatística e gama de momentos.
 
-% Inserir figura e descrição aqui.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{plots/momentum/momentum_muons_pions.png}
+    \caption{Distribuição do momento longitudinal ($p_Z$) para muões ($\mu^{\pm}$) e piões ($\pi^{\pm}$).}
+    \label{fig:momentum_muons_pions}
+\end{figure}
+
+Observa-se que os piões constituem a larga maioria das trajetórias produzidas na simulação, estendendo-se por uma vasta gama de momentos até cerca de $200$~GeV/c. Por outro lado, os muões apresentam um espectro muito mais concentrado em momentos baixos e intermédios: a maioria encontra-se abaixo de alguns GeV/c, embora exista uma cauda estatística rara para momentos superiores. Esta distinção é consistente com a natureza das partículas: os piões, sendo mesões que sofrem interação forte, são massivamente produzidos em colisões hadrónicas de alta energia, enquanto os muões são sobretudo resultantes de decaimentos ou processos eletromagnéticos de menor transferência de momento.
+
+\subsubsection{Piões Primários vs.\ Secundários}
+
+A comparação entre o momento dos piões primários e secundários é exibida na Figura~\ref{fig:momentum_pions_generation}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{plots/momentum/momentum_pions_generation.png}
+    \caption{Comparação da distribuição do momento longitudinal ($p_Z$) para piões primários (geração direta) e secundários.}
+    \label{fig:momentum_pions_generation}
+\end{figure}
+
+A análise revela uma distinção física muito nítida entre as duas categorias:
+\begin{itemize}
+    \item \textbf{Piões Primários:} Apresentam um espectro de momento substancialmente mais energético, herdando uma fração significativa do momento do feixe inicial. O seu perfil estende-se até ao limite cinemático superior.
+    \item \textbf{Piões Secundários:} São muito mais numerosos na simulação, mas o seu momento longitudinal está fortemente concentrado em energias baixas, com a grande maioria abaixo de algumas dezenas de GeV/c e uma cauda de alta energia menos populada. Isto deve-se ao facto de serem gerados em colisões hadrónicas secundárias em cascata (por exemplo, interações inelásticas do tipo \textit{pi-Inelastic} no interior ou na vizinhança do alvo), onde a energia do feixe é progressivamente partilhada por múltiplas partículas filhas de menor momento.
+\end{itemize}
 
 %-----------------------------------------------------------------------------
 \subsection{Identificação de Partículas por Aprendizagem Automática}
@@ -1298,7 +1314,7 @@ domínio restrito $p \in [0.5, 2.0]~\text{GeV}/c$.
 \label{sec:ml_perspectivas}
 %-----------------------------------------------------------------------------
 
-\subsubsection{Contexto: sistemas equivalentes em operação}
+\subsubsection{Contexto: enquadramento metodológico}
 
 Para contextualizar a abordagem adoptada, é útil referir sistemas de PID
 por aprendizagem automática em uso em experimentos do CERN que usam princípios
@@ -1311,15 +1327,16 @@ $\pi/K/p$ por dE/dx no gás~\cite{alice_pid} --- o mesmo problema físico
 fundamental, num detetor de gás em vez de silício.
 
 O trabalho aqui apresentado é uma demonstração académica em dados de simulação
-do mesmo princípio físico que estes sistemas exploram, sem pretender replicar
-a sua escala, complexidade de sub-detectores ou condições de dados reais.
+do mesmo princípio físico subjacente, sendo a comparação estritamente
+metodológica: este trabalho não replica nem se aproxima da escala, complexidade
+ou condições de dados reais desses sistemas.
 
-\subsubsection{O que falta para uma ferramenta de produção}
+\subsubsection{Extensões necessárias para validação experimental}
 
 A transição de uma ferramenta treinada em simulação para um sistema de
-produção num detector real requer três passos adicionais que não são
+produção num detector real requer passos adicionais que não são
 realizáveis neste trabalho por ausência dos dados necessários, mas que
-constituem o caminho natural de desenvolvimento:
+ilustram os requisitos de uma eventual extensão a um contexto experimental real:
 
 \begin{enumerate}
 
@@ -1331,7 +1348,8 @@ constituem o caminho natural de desenvolvimento:
     e momento, sem informação de PID. Exemplos típicos:
     $K^0_S \to \pi^+\pi^-$ (fonte limpa de piões),
     $\Lambda^0 \to p\pi^-$ (fonte limpa de protões).
-    Com estas amostras o modelo pode ser re-treinado em dados reais do AMBER.
+    Com tais amostras, um modelo futuro poderia, em princípio, ser adaptado
+    a dados reais — um passo que excede o âmbito e os recursos deste trabalho.
 
   \item \textbf{Monitorização e re-treino periódico.}
     As propriedades do detector mudam com o tempo: deriva de calibração,
@@ -1370,8 +1388,9 @@ mais eficaz:
     modelam correlações entre partículas na mesma colisão ---
     informação que um classificador por partícula individual não usa.
     Para os quatro detetores do AMBER Target, uma rede neuronal densa
-    com normalização por lote (\textit{batch normalization}) seria o
-    próximo passo natural.
+    com normalização por lote (\textit{batch normalization}) seria uma
+    direcção possível de desenvolvimento futuro, dependente de dados de
+    maior dimensão e de validação experimental adequada.
 
   \item \textbf{Calibração do classificador (\textit{calibration}).}
     A probabilidade $P(\text{protão} | \mathbf{x})$ produzida pelo modelo
@@ -1393,12 +1412,14 @@ onde a separação por dE/dx é fisicamente possível. O classificador reproduz
 quantitativamente a degradação da separação prevista pela fórmula de
 Bethe-Bloch, incluindo o colapso para AUC $\approx 0.53$ (essencialmente
 aleatório) quando as curvas de dE/dx das duas espécies convergem a
-$p > 5~\text{GeV}/c$. Este resultado ilustra, a escala académica e em
-condições simplificadas, o mesmo princípio físico que fundamenta os sistemas
-de PID por aprendizagem automática em operação no LHCb e no ALICE. Os passos
-seguintes para uma ferramenta aplicável a dados reais estão identificados
-na Secção~\ref{sec:ml_perspectivas} e são tecnicamente realizáveis com os
-dados de calibração do AMBER Target.
+$p > 5~\text{GeV}/c$. Este resultado ilustra, à escala académica e em condições simplificadas,
+o mesmo princípio físico subjacente aos sistemas de PID por aprendizagem
+automática em uso no LHCb e no ALICE, sem que esta comparação constitua
+uma equivalência funcional ou uma validação para operação real.
+As extensões necessárias para qualquer aplicação em dados reais ---
+identificadas na Secção~\ref{sec:ml_perspectivas} --- dependeriam de dados
+de calibração reais, validação experimental sistemática e recursos fora do
+âmbito deste trabalho.
 
 %=============================================================================
 \section{Conclusão}
