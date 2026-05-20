@@ -214,6 +214,18 @@ __marimo__/
 *.dat
 *.csv
 report/report.pdf
+plots/
+ROOTFILES/
+
+# Ficheiros auxiliares e temporários de compilação LaTeX
+report/*.aux
+report/*.out
+report/*.toc
+report/*.log
+report/*.synctex.gz
+
+
+
 
 # Overleaf ZIPs e pastas de build temporárias
 report_overleaf*.zip
