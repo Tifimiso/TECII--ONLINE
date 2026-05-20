@@ -1073,18 +1073,29 @@ demonstra-o de forma quantitativa e inequívoca.
 
 \subsubsection{Curvas de aprendizagem}
 
-A Figura~\ref{fig:ml_learning} apresenta as curvas de aprendizagem do
-classificador — \textit{balanced accuracy} no conjunto de treino e na
-validação cruzada em função do número de eventos de treino utilizados.
+A Figura~\ref{fig:ml_learning} apresenta as curvas de aprendizagem de
+ambas as fases — \textit{balanced accuracy} no conjunto de treino e na
+validação cruzada em função do número de eventos utilizados.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.90\textwidth]{plots/energy/ml_learning_curves_fase2.png}
-  \caption{Curvas de aprendizagem do classificador de produção (Fase~2,
-    $\pi$ vs $p$). A convergência entre a curva de treino (azul) e de
-    validação (laranja) indica ausência de overfitting. A estabilização da
-    curva de validação mostra que o modelo está bem ajustado ao tamanho do
-    dataset disponível; mais dados produziria ganhos marginais.}
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/ml_learning_curves_fase1.png}
+    \caption{Fase~1 (3 classes: $\pi$, $K$, $p$)}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/ml_learning_curves_fase2.png}
+    \caption{Fase~2 ($\pi$ vs $p$, domínio restrito)}
+  \end{subfigure}
+  \caption{Curvas de aprendizagem (\textit{balanced accuracy} em treino e
+    validação cruzada 5-fold em função do tamanho do conjunto de treino).
+    Em ambas as fases a curva de validação (laranja) converge para a de
+    treino (azul) sem gap significativo — confirma ausência de overfitting.
+    A Fase~2 atinge valores mais elevados ($\approx 0.93$) e com menor
+    variância, reflectindo o ganho da restrição do domínio.
+    A estabilização das curvas indica que mais dados produziria apenas
+    ganhos marginais: o modelo está bem ajustado ao dataset disponível.}
   \label{fig:ml_learning}
 \end{figure}
 

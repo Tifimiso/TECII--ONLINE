@@ -77,14 +77,44 @@ Ver as instruções em [`data/README.md`](data/README.md) para obter os ficheiro
 pip install -r requirements.txt
 ```
 
+## Como Executar a Análise
+
+### Opção 1 — Pipeline completo (recomendado)
+
+```bash
+python run_all.py
+```
+
+Executa todos os scripts pela ordem correcta. Os scripts ainda não implementados
+pelos colegas são saltados automaticamente sem errar.
+
+### Opção 2 — Só a análise de energia + ML (secção da Diana)
+
+```bash
+python run_all.py --energy   # deposição de energia
+python run_all.py --ml       # classificador ML
+```
+
+### Opção 3 — Script individual
+
+```bash
+python analysis/energy_deposition.py   # deposição de energia
+python analysis/particle_id_ml.py      # identificação por ML
+```
+
+Os gráficos são guardados automaticamente em `plots/energy/`.
+
+---
+
 ## Análises Implementadas
 
 As análises seguem o guia do trabalho prático. Os scripts estão em `analysis/`:
 
-| Script | Análise |
-|--------|---------|
-| `energy_deposition.py` | Deposição de energia por detetor e por partícula |
-| `hit_distribution.py` | Distribuição de hits em X e Y por detetor e carga |
-| `hadronic_vertex.py` | Vértices hadrónicos primários e secundários em Z |
-| `temporal_distribution.py` | Distribuição temporal dos hits por detetor |
-| `momentum_distribution.py` | Momento em Z para muões, piões e piões primários/secundários |
+| Script | Secção | Responsável | Estado |
+|--------|--------|-------------|--------|
+| `energy_deposition.py` | 3.1 — Deposição de energia | Diana | ✅ Completo |
+| `particle_id_ml.py` | 3.6 — Identificação por ML | Diana | ✅ Completo |
+| `hit_distribution.py` | 3.2 — Distribuição de hits | (colega) | ⏳ Por implementar |
+| `hadronic_vertex.py` | 3.3 — Vértices hadrónicos | (colega) | ⏳ Por implementar |
+| `temporal_distribution.py` | 3.4 — Distribuição temporal | (colega) | ⏳ Por implementar |
+| `momentum_distribution.py` | 3.5 — Distribuição do momento | José | ⏳ Por implementar |
