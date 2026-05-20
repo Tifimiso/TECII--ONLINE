@@ -1058,15 +1058,21 @@ def plot_resolution_per_species():
                 print("    {:8s} det {}: sigma/MPV = {:.4f}".format(
                     nome, i, sigmas[i] / mpvs[i]))
 
-    print("  Poder de separacao pi vs p (N_sigma = |MPV_p - MPV_pi| / sqrt(s_p^2 + s_pi^2)):")
-    for i in range(4):
-        mp_pi = resultados.get("Pioes",   {}).get("mpv",   [0]*4)[i]
-        mp_p  = resultados.get("Protoes", {}).get("mpv",   [0]*4)[i]
-        s_pi  = resultados.get("Pioes",   {}).get("sigma", [0]*4)[i]
-        s_p   = resultados.get("Protoes", {}).get("sigma", [0]*4)[i]
-        if mp_pi > 0 and mp_p > 0 and s_pi > 0 and s_p > 0:
-            sep = abs(mp_p - mp_pi) / (s_pi**2 + s_p**2)**0.5
-            print("    Detetor {}: {:.2f} sigma".format(i, sep))
+    pares = [
+        ("pi vs K", "Pioes",   "Kaoes"),
+        ("K  vs p", "Kaoes",   "Protoes"),
+        ("pi vs p", "Pioes",   "Protoes"),
+    ]
+    for label, esp1, esp2 in pares:
+        print("  Poder de separacao {} (N_sigma = |MPV2-MPV1| / sqrt(s1^2+s2^2)):".format(label))
+        for i in range(4):
+            mp1 = resultados.get(esp1, {}).get("mpv",   [0]*4)[i]
+            mp2 = resultados.get(esp2, {}).get("mpv",   [0]*4)[i]
+            s1  = resultados.get(esp1, {}).get("sigma", [0]*4)[i]
+            s2  = resultados.get(esp2, {}).get("sigma", [0]*4)[i]
+            if mp1 > 0 and mp2 > 0 and s1 > 0 and s2 > 0:
+                sep = abs(mp2 - mp1) / (s1**2 + s2**2)**0.5
+                print("    Detetor {}: {:.3f} sigma".format(i, sep))
 
     ROOT.gStyle.SetOptStat(1)
 

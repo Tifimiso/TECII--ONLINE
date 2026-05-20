@@ -599,25 +599,40 @@ foi calculado para os quatro detetores (Tabela~\ref{tab:separacao}).
 
 \begin{table}[H]
   \centering
-  \caption{Poder de separação $N_\sigma$ entre piões e protões por detetor.}
+  \caption{Poder de separação $N_\sigma$ entre pares de espécies por detetor,
+    calculado como $N_\sigma = |\text{MPV}_2 - \text{MPV}_1| /
+    \sqrt{\sigma_1^2 + \sigma_2^2}$.}
   \label{tab:separacao}
-  \begin{tabular}{cc}
+  \begin{tabular}{cccc}
     \toprule
-    \textbf{Detetor} & \textbf{$N_\sigma$ ($\pi$ vs $p$)} \\
+    \textbf{Detetor} & \textbf{$N_\sigma$ ($\pi$ vs $K$)} &
+    \textbf{$N_\sigma$ ($K$ vs $p$)} & \textbf{$N_\sigma$ ($\pi$ vs $p$)} \\
     \midrule
-    0 & $1.42$ \\
-    1 & $1.32$ \\
-    2 & $1.28$ \\
-    3 & $1.23$ \\
+    0 & $0.18$ & $1.32$ & $1.42$ \\
+    1 & $0.12$ & $1.25$ & $1.32$ \\
+    2 & $0.12$ & $1.21$ & $1.28$ \\
+    3 & $0.13$ & $1.14$ & $1.23$ \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-A separação de $\sim 1.4\sigma$ no detetor~0 é insuficiente para PID eficiente
-com um único detetor (o critério padrão é $> 3\sigma$). No entanto, a combinação
-dos quatro detetores e a informação do gráfico dE/dx vs momento (que mostra
-separação mais pronunciada a baixo momento) permitem melhorar significativamente
-a capacidade de identificação.
+A separação $\pi$ vs $p$ de $\sim 1.4\sigma$ no detetor~0 é insuficiente para
+PID eficiente com um único detetor (critério padrão: $> 3\sigma$). A separação
+$K$ vs $p$ é similar ($\sim 1.3\sigma$). No entanto, o resultado mais relevante
+é a separação $\pi$ vs $K$: $N_\sigma \approx 0.18$ --- praticamente zero.
+Esta separação é fisicamente impossível por dE/dx neste regime de momento.
+
+A razão é directa: a $p > 0.5~\text{GeV}/c$, os piões têm $\beta\gamma \approx
+3.6$ e os kaões $\beta\gamma \approx 1.0$, ambos na região de descida da curva
+de Bethe-Bloch onde as perdas de energia das diferentes espécies convergem
+rapidamente. A diferença de MPV é de apenas $\SI{25}{keV}$ ($1.7\%$), muito
+inferior à largura das distribuições ($\sigma_\pi \approx \SI{84}{keV}$,
+$\sigma_K \approx \SI{105}{keV}$). Esta limitação é bem conhecida em física de
+partículas: a separação $\pi/K$ por dE/dx só é viável a baixo momento
+($p \lesssim 0.5~\text{GeV}/c$), onde as curvas de Bethe-Bloch ainda divergem
+significativamente. É precisamente por esta razão que o experimento AMBER dispõe
+de detectores RICH (\textit{Ring Imaging Cherenkov}) para identificação de piões
+e kaões no regime de alto momento.
 
 \textbf{Limitação do corte de momento para protões:} o filtro $p > 0.5~\text{GeV}/c$
 foi escolhido para seleccionar partículas relativistas. Para piões
