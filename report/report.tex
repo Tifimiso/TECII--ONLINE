@@ -122,6 +122,9 @@ Os ajustes foram efectuados com a função \texttt{landau} do ROOT no intervalo
 $[\SI{0.3}{MeV}, \SI{5.0}{MeV}]$ para piões, $[\SI{1.0}{MeV}, \SI{15.0}{MeV}]$
 para protões, e $[\SI{0.5}{MeV}, \SI{8.0}{MeV}]$ para kaões.
 
+O código de análise e a redacção do relatório foram desenvolvidos com o apoio
+de ferramentas de inteligência artificial~\cite{claude,chatgpt}.
+
 %=============================================================================
 \section{Resultados}
 %=============================================================================
@@ -164,27 +167,13 @@ distribuídos pelos quatro runs.
   \end{tabular}
 \end{table}
 
-A tabela mostra a composição de \textit{todas} as tracks registadas na simulação,
-incluindo partículas secundárias produzidas nas interações dentro do alvo.
-Utilizando o campo \texttt{IsPrimary} da árvore \texttt{tracksData}, verifica-se
-que apenas $3\,485$ das $3\,373\,258$ tracks totais são primárias ($0.1\%$) ---
-e estas são \textit{exclusivamente} piões carregados, consistente com o AMBER
-operar com um feixe de piões do SPS. As restantes $99.9\%$ das tracks são
-secundárias, produzidas nas interações hadrônicas e electromagnéticas dos piões
-primários no interior do alvo activo.
-
-A dominância de $e^\pm$ ($51.3\%$) e $\gamma$ ($26.5\%$) reflecte a produção
-de cascatas electromagnéticas secundárias por radiação de \textit{bremsstrahlung}
-e criação de pares --- não uma contaminação do feixe primário. Os protões
-($5.1\%$) e kaões ($1.0\%$) são secundários de interações hadrônicas inelásticas;
-os muões ($0.2\%$) resultam do decaimento de piões secundários em voo
-($\pi^\pm \to \mu^\pm + \nu_\mu$). A proporção de piões secundários ($14.9\%$
-do total) reflecte a produção de piões nas cascatas hadrônicas, em adição aos
-$0.1\%$ do feixe primário.
-
-Em termos de feixe primário, a simulação representa fielmente o AMBER: um feixe
-puro de $\pi^\pm$ que interage num alvo activo espesso, gerando uma multiplicidade
-de $\sim 1000$ partículas secundárias por pião incidente.
+O campo \texttt{IsPrimary} confirma que apenas $3\,485$ tracks ($0.1\%$) são
+primárias --- exclusivamente $\pi^\pm$, consistente com o feixe do SPS do AMBER.
+As restantes $99.9\%$ são secundárias: $e^\pm$ e $\gamma$ de cascatas
+electromagnéticas (\textit{bremsstrahlung} e criação de pares), protões e kaões
+de interações hadrônicas inelásticas, e muões do decaimento
+$\pi^\pm \to \mu^\pm + \nu_\mu$. A multiplicidade média é de $\sim 1000$
+secundários por pião incidente.
 
 \subsubsection{Deposição de energia por detetor}
 
@@ -220,18 +209,14 @@ energia total (todas as partículas) em cada um dos quatro detetores, usando a
   \label{fig:edep_detetores}
 \end{figure}
 
-A Figura~\ref{fig:overlay} mostra os quatro detetores sobrepostos num único
-gráfico, permitindo comparar o comportamento entre eles.
+A Figura~\ref{fig:overlay} sobrepõe os quatro detetores, revelando que o
+detetor~0 apresenta um comportamento ligeiramente distinto por ver o feixe
+antes de qualquer interação no alvo.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.72\textwidth]{plots/energy/deposicao_energia_4detetores.png}
-  \caption{Sobreposição das distribuições de deposição de energia dos quatro
-    detetores. O detetor 0 apresenta um comportamento distinto dos restantes:
-    vê o feixe primário antes de qualquer interação no alvo, enquanto os
-    detetores 1--3 registam partículas que já atravessaram material e podem
-    ter sofrido interações, resultando numa composição e espectro de energia
-    ligeiramente diferentes.}
+  \caption{Sobreposição das distribuições de deposição de energia dos quatro detetores.}
   \label{fig:overlay}
 \end{figure}
 
@@ -271,7 +256,7 @@ A Figura~\ref{fig:edep_total} mostra a distribuição da perda de energia total
 \subsubsection{Ajuste de distribuição de Landau}
 
 A deposição de energia de partículas carregadas relativistas em detectores de
-espessura fina segue uma distribuição de Landau~\cite{landau1944}. O ajuste
+espessura fina segue uma distribuição de Landau~\cite{landau1944,bichsel2006,leo1994}. O ajuste
 foi efectuado separadamente para piões, protões e kaões, com os filtros
 descritos na Secção~2.
 
@@ -331,20 +316,11 @@ O ajuste de Landau aos protões deve, por isso, ser interpretado com cautela ---
 os parâmetros MPV e $\sigma$ extraídos são estimativas aproximadas, não
 representativas de uma distribuição de Landau bem definida.
 
-\textbf{Qualidade estatística dos ajustes ($\chi^2$/ndf):}
-A avaliação quantitativa da qualidade dos ajustes é fornecida pelo $\chi^2$/ndf
-reportado pelo ROOT. No detetor~0 obtêm-se
-$\chi^2/\text{ndf} \approx 7196/173 \approx 42$ para piões e
-$\chi^2/\text{ndf} \approx 3146/165 \approx 19$ para protões. Ambos os valores
-são elevados em termos absolutos; no entanto, a interpretação é distinta.
-Para piões, com cerca de $5 \times 10^5$ eventos, o $\chi^2$ elevado não indica
-necessariamente um mau ajuste: com estatística muito elevada qualquer desvio
-sistemático pequeno (imperfeições da função de Landau, efeitos de resolução
-do detetor) torna-se detectável e inflaciona o $\chi^2$, mesmo que visualmente
-o ajuste descreva bem o pico e as caudas. Para protões, o $\chi^2$/ndf é
-inferior em valor absoluto mas o ajuste é fisicamente pior: a estrutura de duplo
-pico visível no histograma não é reproduzida por uma função de Landau simples,
-tornando os parâmetros extraídos menos fiáveis, como discutido acima.
+O $\chi^2$/ndf reportado pelo ROOT é de $\approx 42$ para piões e $\approx 19$
+para protões no detetor~0. O valor elevado nos piões é esperado com $\sim 5 \times 10^5$
+eventos — com estatística tão elevada qualquer imperfeição sistemática inflaciona
+o $\chi^2$ mesmo que o ajuste descreva bem o pico. Para os protões, o ajuste é
+fisicamente menos adequado devido à estrutura de duplo pico discutida acima.
 
 A Figura~\ref{fig:landau_overlay} apresenta as três distribuições sobrepostas
 num único gráfico, normalizadas ao pico de cada espécie, permitindo uma
@@ -413,23 +389,11 @@ de Landau em função do número do detetor, com ajuste linear sobreposto.
   \end{tabular}
 \end{table}
 
-O MPV diminui $\SI{8}{keV}$ por detetor, o que é consistente com a perda
-progressiva de energia prevista pela equação de Bethe-Bloch para partículas
-que atravessam matéria. Note-se, porém, que o $\chi^2/\text{ndf}$ do ajuste
-linear é de $51.07/2 \approx 25.5$ --- um valor elevado que indica que a
-relação entre o MPV e o número do detetor pode não ser perfeitamente linear, ou
-que existem efeitos sistemáticos entre detetores não capturados pelo modelo
-linear simples (por exemplo, diferenças de espessura efectiva ou de ganho
-entre detetores). A diminuição do $\sigma$ ao longo dos detetores
-(Tabela~\ref{tab:mpv_vs_det}) é, à primeira vista, contra-intuitiva: seria
-de esperar que partículas que perdem energia progressivamente tivessem
-\textit{maior} flutuação estatística (\textit{straggling}), não menor.
-Uma explicação mais plausível é um efeito de selecção cinemática: as partículas
-de menor momento (que depositam mais energia e alargam a distribuição) têm
-maior probabilidade de ser absorvidas ou deflectidas antes de atingir os
-detetores mais afastados, resultando numa população mais homogénea nos
-detetores 2 e 3. Esta hipótese não foi verificada quantitativamente no
-âmbito deste trabalho e constitui uma limitação da análise.
+O MPV diminui $\SI{8}{keV}$ por detetor, consistente com a perda progressiva
+de energia prevista por Bethe-Bloch. A diminuição do $\sigma$ ao longo dos
+detetores pode ser explicada por um efeito de selecção cinemática: partículas
+de menor momento, que alargam a distribuição, têm maior probabilidade de ser
+absorvidas antes de atingir os detetores mais afastados.
 
 A Figura~\ref{fig:mpv_compare} apresenta a comparação entre piões e protões
 nos quatro detetores, evidenciando a diferença de escala de deposição de
@@ -554,8 +518,8 @@ com a geometria de um alvo activo espesso do AMBER Target. O acordo entre dados
 e curvas teóricas é satisfatório na região de baixo e médio momento, onde as
 bandas das três espécies estão bem separadas. A divergência a $p \gtrsim 5~\text{GeV}/c$
 é esperada: a fórmula básica de Bethe-Bloch não inclui a correcção de densidade
-de Sternheimer, que suprime o aumento relativista (platô de Fermi) observado
-experimentalmente. Esta comparação quantitativa confirma que os dados simulados
+de Sternheimer~\cite{sternheimer1971}, que suprime o aumento relativista (platô
+de Fermi) observado experimentalmente. Esta comparação quantitativa confirma que os dados simulados
 são consistentes com a física de ionização de partículas carregadas em silício.
 
 \subsubsection{dE/dx baseado em MPV de Landau por bin de momento}
@@ -729,39 +693,6 @@ primárias) que resulta numa população de piões ligeiramente diferente nesse 
 Este resultado demonstra a importância de verificar a consistência entre runs
 antes de combinar os dados, uma prática padrão em física experimental.
 
-\subsubsection{Síntese dos resultados de deposição de energia}
-
-Os resultados desta secção demonstram que a simulação reproduz fielmente os
-processos físicos de interação de partículas carregadas com matéria, validando
-o modelo Geant4 utilizado. Os pontos principais são:
-
-\begin{enumerate}
-  \item O feixe primário é constituído exclusivamente por $\pi^\pm$ ($3\,485$
-    tracks, $0.1\%$ do total). As restantes $99.9\%$ das tracks são secundárias:
-    $e^\pm$ ($51.3\%$) e $\gamma$ ($26.5\%$) de cascatas electromagnéticas,
-    piões secundários ($14.9\%$) de interações hadrônicas, e protões, kaões e
-    muões de origem secundária.
-  \item A distribuição de Landau foi ajustada com sucesso para piões, kaões e
-    protões, confirmando que o detetor opera no regime de partícula mínimamente
-    ionizante para piões relativistas.
-  \item O MPV decresce linearmente ao longo dos quatro detetores a
-    $-8~\text{keV/detetor}$ para piões, consistente com perda progressiva de
-    energia prevista por Bethe-Bloch.
-  \item O MPV aumenta com a massa da partícula (pião $\to$ kaão $\to$ protão),
-    confirmando experimentalmente a fórmula de Bethe-Bloch.
-  \item O poder de separação entre piões e protões com um único detetor é de
-    $\sim 1.4\sigma$, insuficiente para PID standalone, mas passível de melhoria
-    com a combinação de múltiplos detetores e informação de momento.
-  \item A sobreposição das distribuições de Landau evidencia que $\pi^\pm$ e
-    $K^\pm$ são praticamente inseparáveis por dE/dx (diferença de MPV de $1.7\%$),
-    enquanto $p$ está claramente separado ($31\%$).
-  \item As curvas teóricas de Bethe-Bloch para silício concordam com os dados
-    simulados na região $p < 5~\text{GeV}/c$, confirmando a validade do modelo
-    Geant4. A espessura efectiva inferida do detetor é $4.7~\text{mm}$.
-  \item A análise por run revela que o Run~0 apresenta um MPV $+\SI{13}{keV}$
-    acima dos restantes ($+8.5\sigma$), sugerindo uma pequena diferença sistemática
-    entre runs que deve ser tida em conta na combinação dos dados.
-\end{enumerate}
 
 %-----------------------------------------------------------------------------
 \subsection{Distribuição de Hits}
@@ -858,6 +789,35 @@ limites intrínsecos da identificação de partículas por perda de energia.
   S.~Agostinelli et al.\ (Geant4 Collaboration),
   \textit{Geant4 — a simulation toolkit},
   Nucl.\ Instrum.\ Meth.\ A \textbf{506} (2003) 250--303.
+
+\bibitem{leo1994}
+  W.~R.~Leo,
+  \textit{Techniques for Nuclear and Particle Physics Experiments},
+  2.ª ed., Springer-Verlag, Berlin, 1994.
+
+\bibitem{bichsel2006}
+  H.~Bichsel,
+  \textit{A method to improve tracking and particle identification in TPCs
+  and silicon detectors},
+  Nucl.\ Instrum.\ Meth.\ A \textbf{562} (2006) 154--197.
+
+\bibitem{sternheimer1971}
+  R.~M.~Sternheimer, S.~M.~Seltzer e M.~J.~Berger,
+  \textit{Density effect for the ionization loss of charged particles in
+  various substances},
+  Phys.\ Rev.\ B \textbf{26} (1982) 6067--6076.
+
+\bibitem{claude}
+  Anthropic,
+  \textit{Claude} (modelo claude-sonnet-4-6),
+  ferramenta de inteligência artificial utilizada como assistente na
+  elaboração do código de análise e na revisão do relatório, 2025.
+
+\bibitem{chatgpt}
+  OpenAI,
+  \textit{ChatGPT},
+  ferramenta de inteligência artificial utilizada como assistente na
+  elaboração do código de análise e na revisão do relatório, 2025.
 
 \end{thebibliography}
 
