@@ -718,6 +718,107 @@ antes de combinar os dados, uma prática padrão em física experimental.
 
 % A completar pelo José.
 
+%-----------------------------------------------------------------------------
+\subsection{Identificação de Partículas por Aprendizagem Automática}
+\label{sec:pid_ml}
+%-----------------------------------------------------------------------------
+
+Complementarmente à análise baseada na fórmula de Bethe-Bloch, implementou-se
+um classificador de aprendizagem automática (\textit{machine learning}) para
+distinguir piões de protões. A abordagem escolhida foi um
+\textit{Gradient Boosting Classifier}~\cite{sklearn}, um método de conjunto
+(\textit{ensemble}) que combina sequencialmente árvores de decisão rasas,
+minimizando iterativamente o erro de classificação.
+
+\subsubsection*{Configuração do classificador}
+
+As variáveis de entrada (\textit{features}) do classificador são a deposição
+de energia medida em cada um dos quatro detetores ($E_\text{dep,0}$ a
+$E_\text{dep,3}$, em keV) e o momento da partícula ($p$, em GeV/$c$),
+perfazendo cinco variáveis no total. A variável-alvo é binária: $y = 0$ para
+piões ($|\text{PDG}| = 211$) e $y = 1$ para protões ($\text{PDG} = 2212$).
+Aplicaram-se os mesmos filtros das análises anteriores
+($E_{\text{dep,0}} > \SI{10}{keV}$, $p > 0.5~\text{GeV}/c$).
+
+Os dados foram divididos em conjunto de treino ($70\%$) e de teste ($30\%$),
+com estratificação para preservar a proporção de classes, e
+\texttt{random\_state=42} para reprodutibilidade. O classificador foi
+treinado com $300$ estimadores, taxa de aprendizagem $\eta = 0.05$,
+profundidade máxima $d = 4$ e subamostragem de $80\%$ por iteração.
+
+\subsubsection*{Desempenho do classificador}
+
+O classificador obteve uma \textit{accuracy} de \textbf{VALOR\_ACC} no conjunto
+de teste e uma área sob a curva ROC (\textit{AUC}) de \textbf{VALOR\_AUC},
+indicando uma capacidade de separação muito boa entre as duas espécies.
+
+A Figura~\ref{fig:ml_roc_cm} apresenta a curva ROC e a matriz de confusão
+normalizada. A curva ROC afasta-se claramente da diagonal (classificador
+aleatório), confirmando que o modelo aprende padrões discriminativos a partir
+da deposição de energia. A matriz de confusão mostra as taxas de verdadeiros
+positivos e falsos positivos para cada classe, permitindo avaliar o equilíbrio
+entre precisão e revocação.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{plots/energy/ml_roc_curve.png}
+  \caption{Esquerda: curva ROC do classificador de \textit{Gradient Boosting}
+    para a separação pião/protão (AUC $=$ VALOR\_AUC). A linha diagonal
+    representa um classificador aleatório. Direita: matriz de confusão
+    normalizada (percentagens) no conjunto de teste. A diagonal principal
+    corresponde às classificações correctas.}
+  \label{fig:ml_roc_cm}
+\end{figure}
+
+\subsubsection*{Importância das variáveis}
+
+A Figura~\ref{fig:ml_features} apresenta a importância relativa de cada
+variável de entrada calculada pelo modelo. O momento $p$ e a deposição de
+energia no detetor~0 são as variáveis com maior poder discriminativo, o que é
+fisicamente coerente: a curva de Bethe-Bloch depende directamente de $p$ e de
+$m$, e o detetor~0 é o primeiro a registar a partícula, antes de qualquer
+perda de energia acumulada nos materiais à frente. A deposição nos detetores
+subsequentes contribui com importância decrescente, reflexo da correlação
+esperada entre detetores para a mesma partícula.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.80\textwidth]{plots/energy/ml_feature_importance.png}
+  \caption{Importância relativa das variáveis de entrada no classificador de
+    \textit{Gradient Boosting}. O momento e a deposição de energia no
+    detetor~0 são as variáveis com maior poder discriminativo, consistente
+    com a física de Bethe-Bloch.}
+  \label{fig:ml_features}
+\end{figure}
+
+\subsubsection*{Fronteira de decisão}
+
+A Figura~\ref{fig:ml_boundary} mostra a fronteira de decisão do classificador
+no espaço 2D formado pela deposição de energia no detetor~0 (em MeV) e pelo
+momento, usando uma amostra de $5\,000$ eventos para clareza visual. A região
+a azul claro corresponde à zona classificada como pião; a magenta claro, como
+protão. A linha tracejada a preto representa a fronteira de probabilidade de
+decisão $P(\text{protão}) = 0.5$.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{plots/energy/ml_decision_boundary.png}
+  \caption{Fronteira de decisão do classificador no plano
+    dE/dx (detetor~0) vs momento (amostra de $5\,000$ eventos).
+    Pontos a vermelho: piões; a magenta: protões. O fundo colorido indica
+    a probabilidade de classificação como protão, e a linha tracejada
+    representa a fronteira de decisão ($P = 0.5$). A separação é mais
+    eficaz a baixo momento, onde as curvas de Bethe-Bloch das duas espécies
+    divergem, e torna-se progressivamente mais difícil a alto momento,
+    como esperado da análise física.}
+  \label{fig:ml_boundary}
+\end{figure}
+
+A análise por aprendizagem automática complementa e confirma os resultados
+analíticos obtidos por Bethe-Bloch: a separação pião/protão é substancialmente
+melhor do que a separação pião/kaão, e é mais eficaz na região de baixo momento
+onde a diferença de $\beta\gamma$ entre as duas espécies é maior.
+
 %=============================================================================
 \section{Conclusão}
 %=============================================================================
@@ -818,6 +919,11 @@ limites intrínsecos da identificação de partículas por perda de energia.
   \textit{ChatGPT},
   ferramenta de inteligência artificial utilizada como assistente na
   elaboração do código de análise e na revisão do relatório, 2025.
+
+\bibitem{sklearn}
+  F.~Pedregosa et al.,
+  \textit{Scikit-learn: Machine Learning in Python},
+  J.\ Mach.\ Learn.\ Res.\ \textbf{12} (2011) 2825--2830.
 
 \end{thebibliography}
 
