@@ -1398,6 +1398,162 @@ def plot_dedx_with_bethe_bloch():
         thickness_cm, thickness_cm * 10))
 
 
+def plot_dedx_mpv_vs_momentum():
+    """
+    dE/dx baseado no MPV do fit de Landau por bin de momento — alternativa
+    mais robusta ao TProfile (media aritmetica).
+
+    A distribuicao de Landau e assimetrica: a cauda direita puxa a media para
+    valores sistematicamente acima do MPV. O MPV e o estimador fisicamente
+    correcto da perda mais provavel de energia (equacao de Bethe-Bloch).
+
+    Para cada especie e cada bin de momento logaritmico:
+      1. Extrai o histograma de deposicao de energia (detetor 0).
+      2. Ajusta uma Landau na regiao do pico.
+      3. Extrai o MPV e a sua incerteza do fit.
+    Plota MPV vs momento como TGraphErrors via TMultiGraph, com as curvas de
+    Bethe-Bloch sobrepostas para validacao directa.
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    KEV_TO_MEV = 1e-3
+    dados = carregar_chain("tracksData")
+
+    # (nome, latex, cor, selecao PDG, massa GeV, limite inf fit MeV, limite sup fit MeV)
+    especies = [
+        ("Pioes",   "#pi^{#pm}", ROOT.kRed+1,     "(particlePDG==211||particlePDG==-211)",
+         0.139570, 0.2, 3.0),
+        ("Kaoes",   "K^{#pm}",   ROOT.kCyan+2,    "(particlePDG==321||particlePDG==-321)",
+         0.493677, 0.3, 6.0),
+        ("Protoes", "p",          ROOT.kMagenta+1, "particlePDG==2212",
+         0.938272, 0.5, 10.0),
+    ]
+
+    # 18 bins logaritmicos: 0.3 a 10 GeV/c
+    nBinsMom       = 18
+    momMin, momMax = 0.3, 10.0
+    logEdges = [
+        10**(math.log10(momMin) + i * (math.log10(momMax) - math.log10(momMin)) / nBinsMom)
+        for i in range(nBinsMom + 1)
+    ]
+    MIN_ENTRIES = 60  # minimo de entradas para fit fiavel
+
+    ROOT.gStyle.SetOptStat(0)
+    ROOT.gStyle.SetOptFit(0)
+
+    mg       = ROOT.TMultiGraph("mg_dedx_mpv", "")
+    graphs   = []   # manter referencias Python para evitar GC
+    graphs_bb = []
+    legenda  = ROOT.TLegend(0.15, 0.62, 0.50, 0.88)
+    legenda.SetBorderSize(1)
+
+    # espessura efectiva inferida dos dados (calculada em plot_dedx_with_bethe_bloch)
+    thickness_cm = 0.47
+
+    for k, (nome, latex_nome, cor, selecaoPDG, mass_gev, fitLow, fitHigh) in enumerate(especies):
+        x_pts  = []
+        y_pts  = []
+        ex_pts = []
+        ey_pts = []
+
+        for i in range(nBinsMom):
+            pLow  = logEdges[i]
+            pHigh = logEdges[i + 1]
+            pMid  = math.sqrt(pLow * pHigh)  # centro geometrico (escala log)
+
+            histoName = "h_mpvbin_{}_{}".format(nome, i)
+            hbin = ROOT.TH1D(histoName, "", 300, 0.0, fitHigh * 3.0)
+
+            sel = ("{} && EdepDet0_keV>5 && momentum_GeV>{:.6f} && momentum_GeV<{:.6f}"
+                   .format(selecaoPDG, pLow, pHigh))
+            dados.Draw("EdepDet0_keV*{}>>{}".format(KEV_TO_MEV, histoName), sel, "goff")
+
+            nEnt = int(hbin.GetEntries())
+            if nEnt < MIN_ENTRIES:
+                continue
+
+            fName   = "fLandauMPV_{}_{}".format(nome, i)
+            fLandau = ROOT.TF1(fName, "landau", fitLow, fitHigh)
+            # valor inicial do MPV: curva de Bethe-Bloch escalada pela espessura
+            mpv0 = _bethe_bloch_dedx(pMid, mass_gev) * thickness_cm
+            fLandau.SetParameter(1, mpv0)
+            hbin.Fit(fLandau, "RQ0")
+
+            mpv  = fLandau.GetParameter(1)
+            empv = fLandau.GetParError(1)
+            # aceitar apenas fits fisicamente plausíveis
+            if empv > 0 and 0.05 < mpv < mpv0 * 5.0:
+                x_pts.append(pMid)
+                y_pts.append(mpv)
+                ex_pts.append(0.0)
+                ey_pts.append(empv)
+
+        if len(x_pts) < 2:
+            print("  [AVISO] {} — poucos pontos validos ({})".format(nome, len(x_pts)))
+            continue
+
+        ax = arr.array('d', x_pts)
+        ay = arr.array('d', y_pts)
+        aex = arr.array('d', ex_pts)
+        aey = arr.array('d', ey_pts)
+        g = ROOT.TGraphErrors(len(ax), ax, ay, aex, aey)
+        g.SetName("g_dedxmpv_{}".format(nome))
+        g.SetLineColor(cor)
+        g.SetMarkerColor(cor)
+        g.SetMarkerStyle(20 + k)
+        g.SetMarkerSize(1.0)
+        g.SetLineWidth(2)
+        mg.Add(g, "P")
+        # TMultiGraph takes ownership — dizer ao GC do Python para nao fazer delete duplo
+        ROOT.SetOwnership(g, False)
+        legenda.AddEntry(g, "{} (Landau MPV)".format(latex_nome), "lp")
+        graphs.append(g)
+
+        # curva de Bethe-Bloch teorica
+        x_bb = arr.array('d')
+        y_bb = arr.array('d')
+        for ip in range(120):
+            p_gev = 10**(math.log10(0.2) + ip * (math.log10(12.0) - math.log10(0.2)) / 119)
+            dedx = _bethe_bloch_dedx(p_gev, mass_gev) * thickness_cm
+            if 0.05 < dedx < 20.0:
+                x_bb.append(p_gev)
+                y_bb.append(dedx)
+        if len(x_bb) > 1:
+            gbb = ROOT.TGraph(len(x_bb), x_bb, y_bb)
+            gbb.SetName("gbb_dedxmpv_{}".format(nome))
+            gbb.SetLineColor(cor)
+            gbb.SetLineWidth(2)
+            gbb.SetLineStyle(2)
+            graphs_bb.append(gbb)
+            legenda.AddEntry(gbb, "{} (Bethe-Bloch)".format(latex_nome), "l")
+
+    canvas = ROOT.TCanvas("c_dedx_mpv_mom", "", 900, 650)
+    canvas.SetLogx()
+    canvas.SetLogy()
+    canvas.SetGrid()
+    canvas.SetLeftMargin(0.12)
+
+    mg.Draw("A")
+    mg.SetTitle("MPV de Landau vs momento (detetor 0);p (GeV/c);MPV dE/dx (MeV)")
+    mg.GetXaxis().SetMoreLogLabels()
+    mg.GetYaxis().SetRangeUser(0.2, 15.0)
+    canvas.Modified()
+    canvas.Update()
+
+    for gbb in graphs_bb:
+        gbb.Draw("L SAME")
+
+    legenda.Draw()
+    canvas.SaveAs("{}/dedx_mpv_vs_momentum.png".format(OUTPUT_DIR))
+    canvas.Close()
+
+    ROOT.gStyle.SetOptStat(1)
+    print("[OK] plot_dedx_mpv_vs_momentum")
+    for k, g in enumerate(graphs):
+        nome = especies[k][0]
+        npts = g.GetN()
+        print("  {} — {} pontos validos".format(nome, npts))
+
+
 if __name__ == "__main__":
     plot_beam_composition()
     plot_energy_deposition_per_detector()
@@ -1415,3 +1571,4 @@ if __name__ == "__main__":
     plot_landau_overlay()
     plot_run_consistency()
     plot_dedx_with_bethe_bloch()
+    plot_dedx_mpv_vs_momentum()
