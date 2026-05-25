@@ -174,7 +174,7 @@ As análises seguem o guia do trabalho prático. Os scripts estão em `analysis/
 | -------------------------- | ----------------------------- | ----------- | ------------------ |
 | `energy_deposition.py`     | 3.1 — Deposição de energia    | Diana       | ✅ Completo        |
 | `particle_id_ml.py`        | 3.6 — Identificação por ML    | Diana       | ✅ Completo        |
-| `hit_distribution.py`      | 3.2 — Distribuição de hits    | (colega)    | ⏳ Por implementar |
-| `hadronic_vertex.py`       | 3.3 — Vértices hadrónicos     | (colega)    | ⏳ Por implementar |
-| `temporal_distribution.py` | 3.4 — Distribuição temporal   | (colega)    | ⏳ Por implementar |
+| `hit_distribution.py`      | 3.2 — Distribuição de hits    | Rafael      | ⏳ Por implementar |
+| `hadronic_vertex.py`       | 3.3 — Vértices hadrónicos     | Tiago       | ⏳ Por implementar |
+| `temporal_distribution.py` | 3.4 — Distribuição temporal   | Rafael      | ⏳ Por implementar |
 | `momentum_distribution.py` | 3.5 — Distribuição do momento | José        | ✅ Completo        |
