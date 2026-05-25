@@ -5,17 +5,30 @@ porque são demasiado grandes para serem versionados.
 
 ## Como obter os dados
 
-Os ficheiros de dados foram produzidos pelo Tiago e devem ser partilhados diretamente
-entre os membros do grupo (por exemplo, via pen drive, Google Drive, ou outro meio acordado).
+Os ficheiros de dados encontram-se no computador de laboratório:
+
+```
+ComputerLab12: /media/scratch/CarlosScratch/AMBER/GEANT4/detectorsWithHole-CorrectSize
+```
+
+Podem ser copiados diretamente a partir daí (pen drive, `scp`, etc.).
 
 ## Ficheiros necessários
 
 Coloca os seguintes ficheiros nesta pasta (`data/`) antes de correr os scripts de análise:
 
-- `AmberTarget_Run_0.root` — ficheiro principal de saída da simulação
+| Ficheiro | Descrição |
+|---|---|
+| `AmberTarget_Run_0.root` | Run 0 da simulação AMBER Target |
+| `AmberTarget_Run_1.root` | Run 1 da simulação AMBER Target |
+| `AmberTarget_Run_2.root` | Run 2 da simulação AMBER Target |
+| `AmberTarget_Run_3.root` | Run 3 da simulação AMBER Target |
 
-## Nota para o grupo
+O ficheiro `Analise.root` é gerado automaticamente pelos macros ROOT e pelos scripts de análise — não precisa de ser copiado.
 
-Depois de todos terem os ficheiros `.root` nas suas máquinas, abrir o ficheiro `.gitignore`
-na raiz do projeto e seguir as instruções nos comentários para ativar a regra que ignora
-os ficheiros `Zone.Identifier` (artefactos criados pelo Windows).
+## TTrees disponíveis
+
+Os ficheiros ROOT contêm pelo menos dois TTrees principais:
+
+- `edep_Per_Event` — deposição de energia por evento, com branches `detector0`, `detector1`, etc.
+- `tracksData` — dados por track, com branches como `EdepDet0_keV`, `particlePDG`, `momentum_GeV`, etc.

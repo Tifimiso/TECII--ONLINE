@@ -96,7 +96,6 @@ python -c "import ROOT; print(ROOT.__version__)"
 ```
 
 A instalação recomendada é via `conda`:
-
 ```bash
 conda install -c conda-forge root
 ```
@@ -170,11 +169,11 @@ Para Overleaf: ver as instruções na raiz do repositório sobre a estrutura do 
 
 As análises seguem o guia do trabalho prático. Os scripts estão em `analysis/`:
 
-| Script                     | Secção                        | Responsável | Estado             |
-| -------------------------- | ----------------------------- | ----------- | ------------------ |
-| `energy_deposition.py`     | 3.1 — Deposição de energia    | Diana       | ✅ Completo        |
-| `particle_id_ml.py`        | 3.6 — Identificação por ML    | Diana       | ✅ Completo        |
-| `hit_distribution.py`      | 3.2 — Distribuição de hits    | Rafael      | ⏳ Por implementar |
-| `hadronic_vertex.py`       | 3.3 — Vértices hadrónicos     | Tiago       | ⏳ Por implementar |
-| `temporal_distribution.py` | 3.4 — Distribuição temporal   | Rafael      | ⏳ Por implementar |
-| `momentum_distribution.py` | 3.5 — Distribuição do momento | José        | ✅ Completo        |
+| Script | Secção | Responsável | Estado |
+|--------|--------|-------------|--------|
+| `energy_deposition.py` | 3.1 — Deposição de energia | Diana | ✅ Completo |
+| `particle_id_ml.py` | 3.6 — Identificação por ML | Diana | ✅ Completo |
+| `hit_distribution.py` | 3.2 — Distribuição de hits | (colega) | ⏳ Por implementar |
+| `hadronic_vertex.py` | 3.3 — Vértices hadrónicos | (colega) | ⏳ Por implementar |
+| `temporal_distribution.py` | 3.4 — Distribuição temporal | (colega) | ⏳ Por implementar |
+| `momentum_distribution.py` | 3.5 — Distribuição do momento | José | ✅ Completo |

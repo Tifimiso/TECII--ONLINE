@@ -1,36 +1,824 @@
 \documentclass[12pt,a4paper]{article}
 \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage[portuguese]{babel}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
 \usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{siunitx}
+\usepackage{array}
+\usepackage{xcolor}
 
-\title{Tópicos em Engenharia Computacional II\\Trabalho Prático 2024/2025}
-\author{}
-\date{}
+\geometry{margin=2.5cm}
+\captionsetup{font=small, labelfont=bf}
+\sisetup{separate-uncertainty=true}
+
+\title{%
+  \textbf{Tópicos em Engenharia Computacional II}\\[0.4em]
+  \large Trabalho Prático 2024/2025\\[0.2em]
+  \normalsize Simulação e Análise do Detector AMBER Target no CERN
+}
+\author{Diana Monteiro \and [Nome Colega 2] \and [Nome Colega 3] \and José [Apelido]}
+\date{Universidade de Aveiro, \today}
 
 \begin{document}
 
 \maketitle
 
+\begin{abstract}
+Este trabalho apresenta a simulação e análise do detetor AMBER Target
+(CERN SPS) usando o \textit{framework} Geant4, com análise estatística
+sobre quatro ficheiros ROOT totalizando $3.31 \times 10^6$ \textit{tracks}.
+O trabalho está organizado em cinco componentes complementares:
+(1)~\textbf{deposição de energia} — ajuste de distribuições de Landau para
+piões, kaões e protões, verificação da compatibilidade com a fórmula de
+Bethe-Bloch e classificador
+de aprendizagem automática ($\text{AUC} = 0.975$, \textit{balanced accuracy}
+$= 92.8\%$ no domínio $p \in [0.5, 2.0]~\text{GeV}/c$);
+(2)~\textbf{distribuição de \textit{hits}} — mapeamento espacial dos hits por
+detetor;
+(3)~\textbf{vértices hadrónicos} — localização longitudinal dos vértices
+primários e secundários no alvo activo;
+(4)~\textbf{distribuição temporal} — análise dos tempos de chegada dos hits;
+(5)~\textbf{distribuição do momento} — espectro de momento das partículas
+secundárias produzidas.
+Os resultados são consistentes com o comportamento físico esperado da
+ionização de partículas carregadas em silício e permitem quantificar
+os limites intrínsecos da identificação de partículas por perda de energia,
+confirmando a necessidade de detetores RICH para a separação $\pi/K$ no
+regime de alto momento.
+\end{abstract}
+
 \tableofcontents
 \newpage
 
+%=============================================================================
 \section{Introdução}
+\label{sec:intro}
+%=============================================================================
 
+O projeto AMBER (\textit{Apparatus for Meson and Baryon Experimental Research})
+é um experimento de física hadrónica de nova geração localizado no
+\textit{Super Proton Synchrotron} (SPS) do CERN~\cite{amber2022}. O seu
+principal objectivo é investigar a estrutura hadrónica — em particular a
+distribuição de momento dos quarks e gluões dentro do protão e do pião — através
+de colisões com alvos fixos a energias de feixe entre 50 e $\SI{280}{GeV}$.
+O sistema de detetores inclui um alvo activo (AMBER Target) rodeado por detetores
+de silício de alta granularidade, concebidos para registar com precisão os produtos
+das interações hadrónicas.
+
+A simulação de Monte Carlo com o \textit{framework} Geant4~\cite{geant4} é
+indispensável para validar a resposta do detetor antes da tomada de dados real.
+Permite estudar a eficiência de identificação de partículas, estimar fundos
+electromagnéticos e verificar se os algoritmos de reconstrução são capazes de
+separar o sinal de interesse (interações hadrónicas de muões e piões) do fundo
+dominante (electrões e fotões).
+
+Neste trabalho realizou-se uma simulação completa do AMBER Target em Geant4 e
+procedeu-se à análise estatística dos dados simulados com macros ROOT e com Python
+(\texttt{uproot}, \texttt{scikit-learn}). A análise
+está organizada em cinco componentes complementares, cada uma da responsabilidade
+de um membro do grupo:
+
+\begin{enumerate}
+  \item \textbf{Deposição de energia} — caracterização da resposta energética dos
+    quatro detetores de silício; identificação de espécies por perda de energia
+    (método Bethe-Bloch); análise quantitativa das distribuições de Landau.
+  \item \textbf{Distribuição de hits} — mapeamento espacial (X, Y) dos hits nos
+    detetores; separação entre partículas carregadas e neutras.
+  \item \textbf{Vértices hadrónicos} — localização longitudinal dos vértices de
+    interação primários e secundários ao longo do alvo.
+  \item \textbf{Distribuição temporal} — análise da distribuição dos tempos de
+    chegada dos hits por detetor.
+  \item \textbf{Distribuição do momento} — espectro de momento de muões, piões
+    primários e piões secundários.
+\end{enumerate}
+
+A análise foi efectuada sobre quatro ficheiros ROOT de simulação independentes
+(AmberTarget\_Run\_0 a Run\_3), totalizando $3.31 \times 10^6$ tracks, combinados
+com \texttt{TChain} para maximizar a estatística disponível. Os resultados
+permitem avaliar a consistência da análise com a física esperada e quantificar
+a capacidade de identificação de partículas do detetor AMBER Target.
+
+%=============================================================================
 \section{Dados e Metodologia}
+%=============================================================================
 
+\subsection*{Dados de simulação}
+
+Os dados foram gerados por simulações Geant4 e armazenados em formato ROOT.
+Cada run corresponde a uma simulação independente do mesmo cenário experimental.
+A análise combina os quatro runs usando \texttt{TChain}, garantindo estatística
+suficiente para ajustes robustos.
+
+As árvores ROOT utilizadas são:
+\begin{itemize}
+  \item \texttt{tracksData} — informação por track: PDG code, momento
+    (\texttt{momentum\_GeV}), deposição de energia por detetor em keV
+    (\texttt{EdepDet0\_keV} a \texttt{EdepDet3\_keV}).
+  \item \texttt{edep\_Per\_Event} — deposição de energia total por evento
+    em eV (\texttt{detector0} a \texttt{detector3}).
+  \item \texttt{hadronicVertex} — posição dos vértices hadrónicos
+    (\texttt{vertexPosZ\_cm}, \texttt{IsPrimary}).
+\end{itemize}
+
+\subsection*{Metodologia}
+
+As espécies de partículas foram identificadas pelo código PDG:
+electrões/positrões ($\pm 11$), fotões ($22$), piões carregados ($\pm 211$),
+protões ($2212$), kaões carregados ($\pm 321$) e muões ($\pm 13$).
+
+Para o ajuste de Landau aplicaram-se os seguintes filtros, consistentes com
+os macros ROOT de referência (\texttt{fitLandau.C}):
+\begin{itemize}
+  \item $E_\text{dep} > \SI{10}{keV}$ — eliminar deposições residuais e ruído;
+  \item $p > 0.5~\text{GeV}/c$ — selecionar partículas com momento suficiente
+    para que a deposição de energia siga uma distribuição de Landau bem definida.
+    Este corte é adequado para piões ($\beta\gamma \approx 3.6$, próximo do mínimo
+    de ionização), mas menos rigoroso para protões ($\beta\gamma \approx 0.53$),
+    como discutido na Secção~\ref{sec:resolucao}.
+\end{itemize}
+
+Os ajustes foram efectuados com a função \texttt{landau} do ROOT no intervalo
+$[\SI{0.3}{MeV}, \SI{5.0}{MeV}]$ para piões, $[\SI{1.0}{MeV}, \SI{15.0}{MeV}]$
+para protões, e $[\SI{0.5}{MeV}, \SI{8.0}{MeV}]$ para kaões.
+
+O código de análise e a redacção do relatório foram desenvolvidos com o apoio
+de ferramentas de inteligência artificial (Claude da Anthropic e ChatGPT da
+OpenAI)~\cite{claude,chatgpt}, utilizadas como assistentes para geração de
+código, pesquisa bibliográfica e revisão de texto. Todas as decisões analíticas
+--- escolha de métodos, interpretação dos resultados e validação das conclusões
+físicas --- são da responsabilidade da autora. O uso destas ferramentas foi
+autorizado explicitamente pelo docente da unidade curricular.
+
+%=============================================================================
 \section{Resultados}
+%=============================================================================
 
+%-----------------------------------------------------------------------------
 \subsection{Deposição de Energia}
+%-----------------------------------------------------------------------------
 
+\subsubsection{Composição do feixe}
+
+A Figura~\ref{fig:composicao_feixe} mostra a abundância relativa de cada
+espécie de partícula no feixe simulado, totalizando $3\,311\,783$ tracks
+distribuídos pelos quatro runs.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.75\textwidth]{plots/energy/composicao_feixe.png}
+  \caption{Composição do feixe simulado: número de tracks por espécie de
+    partícula (escala logarítmica). O feixe é dominado por fundo
+    electromagnético — electrões/positrões e fotões.}
+  \label{fig:composicao_feixe}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{Abundância relativa das espécies de partículas no feixe simulado
+    (4 runs combinados, $3.31 \times 10^6$ tracks).}
+  \label{tab:composicao}
+  \begin{tabular}{lrr}
+    \toprule
+    \textbf{Espécie} & \textbf{Tracks} & \textbf{Fracção (\%)} \\
+    \midrule
+    $e^\pm$       & $1\,700\,319$ & $51.3$ \\
+    $\gamma$      & $892\,312$    & $26.9$ \\
+    $\pi^\pm$     & $505\,871$    & $15.3$ \\
+    $p$           & $172\,125$    & $5.2$  \\
+    $K^\pm$       & $33\,216$     & $1.0$  \\
+    $\mu^\pm$     & $7\,940$      & $0.2$  \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+O campo \texttt{IsPrimary} confirma que apenas $3\,485$ tracks ($0.1\%$) são
+primárias --- exclusivamente $\pi^\pm$, consistente com o feixe do SPS do AMBER.
+As restantes $99.9\%$ são secundárias: $e^\pm$ e $\gamma$ de cascatas
+electromagnéticas (\textit{bremsstrahlung} e criação de pares), protões e kaões
+de interações hadrónicas inelásticas, e muões do decaimento
+$\pi^\pm \to \mu^\pm + \nu_\mu$. A multiplicidade média é de $\sim 1000$
+secundários por pião incidente.
+
+\subsubsection{Deposição de energia por detetor}
+
+A Figura~\ref{fig:edep_detetores} apresenta os histogramas de deposição de
+energia total (todas as partículas) em cada um dos quatro detetores, usando a
+árvore \texttt{edep\_Per\_Event} (valores convertidos de eV para MeV).
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/edep_detector0.png}
+    \caption{Detetor 0}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/edep_detector1.png}
+    \caption{Detetor 1}
+  \end{subfigure}
+  \\[1em]
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/edep_detector2.png}
+    \caption{Detetor 2}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/edep_detector3.png}
+    \caption{Detetor 3}
+  \end{subfigure}
+  \caption{Histogramas de deposição de energia (escala logarítmica) em cada
+    detetor. A distribuição apresenta a forma assimétrica característica da
+    deposição de energia de partículas carregadas relativistas em matéria fina,
+    com pico de Landau na região $0.1$--$0.3$ MeV.}
+  \label{fig:edep_detetores}
+\end{figure}
+
+A Figura~\ref{fig:overlay} sobrepõe os quatro detetores, revelando que o
+detetor~0 apresenta um comportamento ligeiramente distinto por ver o feixe
+antes de qualquer interação no alvo.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{plots/energy/deposicao_energia_4detetores.png}
+  \caption{Sobreposição das distribuições de deposição de energia dos quatro detetores.}
+  \label{fig:overlay}
+\end{figure}
+
+\subsubsection{Deposição de energia por espécie de partícula}
+
+A Figura~\ref{fig:edep_particulas} apresenta as distribuições de deposição de
+energia normalizadas a 1 para cada espécie, no detetor~0, permitindo comparar
+as formas independentemente da abundância relativa.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{plots/energy/edep_por_particula_detector0.png}
+  \caption{Deposição de energia por espécie de partícula no detetor~0 (normalizado
+    a 1, escala logarítmica). Cada espécie tem uma ``impressão digital'' distinta:
+    fotões cortam abruptamente ($\lesssim \SI{2}{MeV}$) pois não ionizam
+    directamente; protões têm cauda longa devido à maior massa e menor velocidade;
+    piões e muões apresentam perfis semelhantes na região relativista.}
+  \label{fig:edep_particulas}
+\end{figure}
+
+A Figura~\ref{fig:edep_total} mostra a distribuição da perda de energia total
+(soma dos quatro detetores) por espécie.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{plots/energy/edep_total_por_particula.png}
+  \caption{Soma da deposição de energia nos detetores atravessados por cada
+    track, por espécie de partícula (normalizado a 1). Nota: tracks que não
+    atravessam todos os detetores contribuem com zero nos detetores não
+    visitados, pelo que este valor representa a deposição nos detetores
+    efectivamente atravessados, não necessariamente nos quatro. Os protões
+    apresentam uma distribuição alargada e deslocada para energias superiores,
+    consistente com maior perda de energia por ionização.}
+  \label{fig:edep_total}
+\end{figure}
+
+\subsubsection{Ajuste de distribuição de Landau}
+
+A deposição de energia de partículas carregadas relativistas em detectores de
+espessura fina segue uma distribuição de Landau~\cite{landau1944,bichsel2006,leo1994}. O ajuste
+foi efectuado separadamente para piões, protões e kaões, com os filtros
+descritos na Secção~2.
+
+A Figura~\ref{fig:landau_pioes} mostra o ajuste de Landau à deposição de
+energia de piões no detetor~0 (representativo dos quatro detetores).
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/landau_pioes_detector0.png}
+    \caption{Piões — Detetor 0}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/landau_protoes_detector0.png}
+    \caption{Protões — Detetor 0}
+  \end{subfigure}
+  \caption{Ajuste de distribuição de Landau à deposição de energia de piões
+    (esquerda) e protões (direita) no detetor~0 ($p > 0.5~\text{GeV}/c$,
+    $E_\text{dep} > \SI{10}{keV}$). O pico de Landau (MPV) dos protões é
+    claramente deslocado para energias superiores, reflectindo a maior massa
+    desta espécie.}
+  \label{fig:landau_pioes}
+\end{figure}
+
+A Tabela~\ref{tab:landau} resume os parâmetros do ajuste de Landau para as
+três espécies hadrónicas no detetor~0.
+
+\begin{table}[H]
+  \centering
+  \caption{Parâmetros do ajuste de Landau no detetor~0 para piões, kaões e
+    protões relativistas ($p > 0.5~\text{GeV}/c$).}
+  \label{tab:landau}
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Espécie} & \textbf{Massa} (MeV/$c^2$) &
+    \textbf{MPV} (MeV) & \textbf{$\sigma$} (MeV) \\
+    \midrule
+    $\pi^\pm$ & $139.6$ & $1.436 \pm 0.001$ & $0.0841 \pm 0.0003$ \\
+    $K^\pm$   & $493.7$ & $1.461 \pm 0.003$ & $0.105 \pm 0.001$ \\
+    $p$       & $938.3$ & $1.911 \pm 0.006$ & $0.324 \pm 0.003$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+É de notar que a qualidade do ajuste de Landau difere substancialmente entre
+piões e protões. No histograma de protões (Figura~\ref{fig:landau_pioes}, direita)
+é visível uma estrutura com dois máximos locais --- a distribuição não segue uma
+Landau pura, ao contrário dos piões (esquerda), cujo histograma apresenta o
+perfil assimétrico característico com um pico bem definido. Este comportamento
+está directamente ligado à limitação metodológica do corte de momento discutida
+na Secção~\ref{sec:resolucao}: com $p > 0.5~\text{GeV}/c$, os protões encontram-se
+a $\beta\gamma \approx 0.53$, uma região de transição onde a perda de energia é
+ainda fortemente dependente de $\beta$, resultando na sobreposição de populações
+com deposições de energia distintas e na consequente deformação da distribuição.
+O ajuste de Landau aos protões deve, por isso, ser interpretado com cautela ---
+os parâmetros MPV e $\sigma$ extraídos são estimativas aproximadas, não
+representativas de uma distribuição de Landau bem definida.
+
+O $\chi^2$/ndf reportado pelo ROOT é de $\approx 42$ para piões e $\approx 19$
+para protões no detetor~0. O valor elevado nos piões é esperado com $\sim 5 \times 10^5$
+eventos — com estatística tão elevada qualquer imperfeição sistemática inflaciona
+o $\chi^2$ mesmo que o ajuste descreva bem o pico. Para os protões, o ajuste é
+fisicamente menos adequado devido à estrutura de duplo pico discutida acima.
+
+\textbf{Nota metodológica:} nesta análise utilizou-se uma Landau pura como
+função de ajuste, o que constitui uma aproximação reconhecida. Numa análise mais
+refinada, utilizaria-se a convolução de uma distribuição de Landau com uma
+Gaussiana (\textit{Landau}$\otimes$\textit{Gauss}), que modela simultaneamente
+a flutuação estatística de ionização e a resolução instrumental do detetor
+(ruído de leitura, difusão de portadores). Esta convolução é o estimador
+padrão em TPCs~\cite{bichsel2006}. Para os fins desta análise comparativa —
+em particular para piões, cujo perfil segue bem uma Landau pura neste regime
+de espessura — a aproximação é adequada, mas os valores de $\sigma$ extraídos
+poderão estar ligeiramente sobrestimados.
+
+A Figura~\ref{fig:landau_overlay} apresenta as três distribuições sobrepostas
+num único gráfico, normalizadas ao pico de cada espécie, permitindo uma
+comparação directa das formas e posições dos picos.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{plots/energy/landau_overlay_pi_k_p.png}
+  \caption{Sobreposição das distribuições de Landau normalizadas ao pico para
+    piões, kaões e protões no detetor~0 ($p > 0.5~\text{GeV}/c$,
+    $E_\text{dep} > \SI{10}{keV}$). Os piões e kaões têm MPV praticamente
+    idênticos ($1.44$ e $1.46~\text{MeV}$, diferença de $\sim 1.7\%$), enquanto
+    os protões estão claramente deslocados para $1.91~\text{MeV}$. As linhas
+    a tracejado correspondem aos ajustes de Landau individuais.}
+  \label{fig:landau_overlay}
+\end{figure}
+
+Este gráfico evidencia dois aspectos fundamentais da capacidade de separação
+por dE/dx neste detetor. Por um lado, a separação entre piões e kaões é
+praticamente inviável: a diferença de MPV é de apenas $\SI{24}{keV}$ ($\sim 1.7\%$),
+muito inferior à largura das distribuições ($\sigma_\pi \approx \SI{84}{keV}$).
+Por outro lado, a separação entre piões (ou kaões) e protões é mais favorável —
+diferença de MPV de $\sim 33\%$ —, mas ainda insuficiente para PID eficiente
+com um único detetor, como quantificado na Secção~\ref{sec:resolucao}.
+
+\subsubsection{Evolução do MPV ao longo dos detetores}
+
+A Figura~\ref{fig:mpv_vs_det} mostra a evolução do MPV e do $\sigma$ do ajuste
+de Landau em função do número do detetor, com ajuste linear sobreposto.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/mpv_vs_detector.png}
+    \caption{MPV vs.\ número do detetor}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/sigma_vs_detector.png}
+    \caption{$\sigma$ vs.\ número do detetor}
+  \end{subfigure}
+  \caption{Evolução do MPV (esquerda) e $\sigma$ (direita) do fit de Landau
+    para piões relativistas em função do número do detetor, com ajuste linear
+    (tracejado). Ambos os parâmetros decrescem monotonicamente ao longo do
+    trajecto.}
+  \label{fig:mpv_vs_det}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{Parâmetros do ajuste de Landau para piões em cada detetor e
+    respectivos declives do ajuste linear.}
+  \label{tab:mpv_vs_det}
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{Detetor} & \textbf{MPV (MeV)} & \textbf{$\sigma$ (MeV)} \\
+    \midrule
+    0 & $1.4362 \pm 0.0006$ & $0.0841 \pm 0.0003$ \\
+    1 & $1.4286 \pm 0.0004$ & $0.0812 \pm 0.0002$ \\
+    2 & $1.4175 \pm 0.0003$ & $0.0760 \pm 0.0002$ \\
+    3 & $1.4126 \pm 0.0003$ & $0.0734 \pm 0.0002$ \\
+    \midrule
+    Declive MPV        & \multicolumn{2}{c}{$-0.0080 \pm 0.0002$ MeV/detetor} \\
+    Declive $\sigma$   & \multicolumn{2}{c}{$-0.0037 \pm 0.0001$ MeV/detetor} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+O MPV diminui $\SI{8}{keV}$ por detetor, consistente com a perda progressiva
+de energia prevista por Bethe-Bloch. A diminuição do $\sigma$ ao longo dos
+detetores pode ser explicada por um efeito de selecção cinemática: partículas
+de menor momento, que alargam a distribuição, têm maior probabilidade de ser
+absorvidas antes de atingir os detetores mais afastados.
+
+A Figura~\ref{fig:mpv_compare} apresenta a comparação entre piões e protões
+nos quatro detetores, evidenciando a diferença de escala de deposição de
+energia entre as duas espécies e a taxa de decrescimento distinta.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{plots/energy/mpv_pioes_vs_protoes.png}
+  \caption{MPV do fit de Landau em função do número do detetor para piões e
+    protões. Os protões depositam consistentemente mais energia ($\sim 33\%$
+    superior no detetor~0) e apresentam uma taxa de decrescimento mais acentuada,
+    o que é expectável para partículas mais pesadas que perdem energia mais
+    rapidamente por ionização.}
+  \label{fig:mpv_compare}
+\end{figure}
+
+\subsubsection{Compatibilidade com a fórmula de Bethe-Bloch}
+
+A fórmula de Bethe-Bloch descreve a perda de energia por ionização de partículas
+carregadas relativistas em matéria:
+\begin{equation}
+  -\frac{dE}{dx} = K z^2 \frac{Z}{A} \frac{1}{\beta^2}
+  \left[ \frac{1}{2} \ln \frac{2 m_e c^2 \beta^2 \gamma^2 T_\text{max}}{I^2}
+  - \beta^2 \right]
+  \label{eq:bethe}
+\end{equation}
+onde $K = \SI{0.307}{MeV\,mol^{-1}\,cm^2}$, $z$ é a carga da partícula,
+$Z$ e $A$ são o número atómico e a massa molar do material, $\beta$ e $\gamma$
+os parâmetros relativistas, $m_e$ a massa do electrão, $T_\text{max}$ a energia
+máxima transferível num único choque e $I$ o potencial de ionização médio.
+
+Para partículas com o mesmo momento $p$, velocidades distintas $\beta$ (e portanto
+$\beta\gamma = p/mc$) implica diferenças em $dE/dx$. Partículas mais pesadas
+têm $\beta$ menor para o mesmo momento, o que aumenta o termo $1/\beta^2$ e,
+consequentemente, a perda de energia.
+
+A Figura~\ref{fig:mpv_massa} mostra o MPV extraído do ajuste de Landau em
+função da massa da partícula, usando o detetor~0 como referência.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{plots/energy/mpv_vs_massa.png}
+  \caption{MPV do fit de Landau em função da massa da partícula (detetor~0,
+    $p > 0.5~\text{GeV}/c$). O crescimento do MPV com a massa é consistente
+    com a dependência prevista pela fórmula de Bethe-Bloch nos dados simulados:
+    partículas mais pesadas, com menor $\beta$ para o mesmo intervalo de momento,
+    depositam mais energia por unidade de comprimento.}
+  \label{fig:mpv_massa}
+\end{figure}
+
+Os resultados são coerentes com a equação~(\ref{eq:bethe}): o MPV aumenta de
+$1.44~\text{MeV}$ para piões ($m = 139.6~\text{MeV}/c^2$) para $1.91~\text{MeV}$
+para protões ($m = 938.3~\text{MeV}/c^2$), uma diferença de $\sim 33\%$.
+Os kaões ($m = 493.7~\text{MeV}/c^2$, MPV $= 1.46~\text{MeV}$) são intermédios
+mas mais próximos dos piões. Este comportamento é explicado pelo parâmetro
+$\beta\gamma = p/(mc)$: a $p = 0.5~\text{GeV}/c$, os piões têm $\beta\gamma \approx
+3.6$ (próximo do mínimo de ionização) enquanto os kaões têm $\beta\gamma \approx
+1.0$ (início da subida relativista), depositando portanto mais energia do que
+seria esperado só pela diferença de massa, e aproximando-se do valor dos protões.
+Os três pontos simulados na Figura~\ref{fig:mpv_massa} mostram uma tendência
+crescente do MPV com a massa da partícula, consistente com a fórmula de
+Bethe-Bloch: partículas mais pesadas têm menor $\beta$ para o mesmo momento e,
+portanto, maior $1/\beta^2$ e maior perda de energia. Dado o número reduzido de
+pontos (três espécies), não se efectuou um ajuste formal --- a figura serve para
+ilustrar qualitativamente a dependência em massa prevista pela teoria.
+
+\subsubsection{dE/dx vs momento — bandas de Bethe-Bloch}
+
+A Figura~\ref{fig:dedx_mom} apresenta o valor médio de deposição de energia
+no detetor~0 em função do momento da partícula (escala logarítmica em ambos
+os eixos), para piões, kaões e protões.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{plots/energy/dedx_vs_momentum.png}
+  \caption{Valor médio de $\langle\text{dE/dx}\rangle$ em função do momento
+    para piões, kaões e protões (detetor~0, $E_\text{dep} > \SI{10}{keV}$).
+    As curvas mostram a forma característica de Bethe-Bloch: descida
+    relativista a baixo momento, mínimo de ionização, e convergência das
+    três espécies a alto momento ($p \gtrsim 5~\text{GeV}/c$) quando todas
+    atingem o regime ultrarelativista.}
+  \label{fig:dedx_mom}
+\end{figure}
+
+Este gráfico é o instrumento fundamental de identificação de partículas por
+perda de energia (PID): a diferentes momentos, cada espécie ocupa uma ``banda''
+distinta. A separação é máxima na região de baixo momento ($p < 1~\text{GeV}/c$)
+e diminui progressivamente à medida que as partículas se tornam ultrarelativistas.
+A $p \gtrsim 5~\text{GeV}/c$ as três curvas convergem, tornando a separação por
+dE/dx impraticável sem informação adicional.
+
+\textbf{Nota metodológica:} o gráfico usa a média aritmética
+$\langle\text{dE/dx}\rangle$ (calculada com \texttt{TProfile}), que é
+fortemente influenciada pela cauda direita da distribuição de Landau.
+A fórmula de Bethe-Bloch prevê rigorosamente o \textit{most probable value}
+(MPV), não a média. Uma análise baseada em MPV — mais fisicamente correcta
+para comparação quantitativa com Bethe-Bloch — é apresentada na
+secção~\ref{sec:dedx_mpv}.
+
+\textbf{Comparação com a previsão teórica de Bethe-Bloch:}
+a Figura~\ref{fig:dedx_bb} sobrepõe os dados simulados com as curvas
+teóricas de Bethe-Bloch calculadas para silício ($Z = 14$, $A = 28.09~\text{g/mol}$,
+$I = 173~\text{eV}$, $\rho = 2.329~\text{g/cm}^3$, PDG 2022~\cite{pdg2022}),
+sem correcção de densidade (válida para $p \lesssim 10~\text{GeV}/c$ neste detetor).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{plots/energy/dedx_vs_momentum_bethe_bloch.png}
+  \caption{$\langle\text{dE/dx}\rangle$ vs momento com curvas teóricas de
+    Bethe-Bloch sobrepostas (linhas tracejadas) para piões, kaões e protões,
+    calculadas para silício. A espessura efectiva do detetor ($4.7~\text{mm}$)
+    foi inferida dos dados de piões ao mínimo de ionização ($\beta\gamma \approx 3.5$,
+    $p \approx 0.55~\text{GeV}/c$). O acordo entre dados e teoria é bom na
+    região de separação máxima ($p < 2~\text{GeV}/c$); a discrepância a alto
+    momento deve-se à correcção de densidade (platô de Fermi) não incluída na
+    fórmula básica.}
+  \label{fig:dedx_bb}
+\end{figure}
+
+A espessura efectiva inferida do detetor é $4.7~\text{mm}$, valor consistente
+com a geometria de um alvo activo espesso do AMBER Target. Esta estimativa foi
+obtida dividindo o MPV observado dos piões no mínimo de ionização
+($\beta\gamma \approx 3.5$, $p \approx 0.55~\text{GeV}/c$,
+$\text{MPV}_\text{MIP} \approx 1.54~\text{MeV}$) pelo valor de
+$\langle\text{dE/dx}\rangle_\text{MIP}$ calculado pela fórmula de Bethe-Bloch
+para silício com os parâmetros do PDG~\cite{pdg2022}
+($\rho = 2.329~\text{g/cm}^3$, $I = \SI{173}{eV}$):
+$x_\text{eff} = \text{MPV}_\text{MIP}\, /\, (\langle\text{dE/dx}\rangle_\text{MIP} \cdot \rho)$.
+Esta inferência é aproximada: assume geometria uniforme e que a Geant4 reproduz
+fielmente o valor absoluto de dE/dx no mínimo; a espessura real do detetor
+deveria ser confirmada através dos ficheiros de configuração da simulação.
+Note-se ainda que este procedimento é parcialmente circular — a mesma curva de
+Bethe-Bloch é usada tanto para inferir a espessura como para verificar o acordo
+— pelo que o resultado demonstra a consistência interna do pipeline de análise,
+não uma validação independente da teoria.
+O acordo entre dados e curvas teóricas é satisfatório na região de baixo e médio momento, onde as
+bandas das três espécies estão bem separadas. A divergência a $p \gtrsim 5~\text{GeV}/c$
+é esperada: a fórmula básica de Bethe-Bloch não inclui a correcção de densidade
+de Sternheimer~\cite{sternheimer1982}, que suprime o aumento relativista (platô
+de Fermi) observado experimentalmente. Esta comparação quantitativa confirma que os dados simulados
+são consistentes com a física de ionização de partículas carregadas em silício.
+
+\subsubsection{dE/dx baseado em MPV de Landau por bin de momento}
+\label{sec:dedx_mpv}
+
+A média aritmética $\langle\text{dE/dx}\rangle$ de um TProfile é um estimador
+enviesado para distribuições de Landau, cuja cauda direita assimétrica puxa
+sistematicamente a média para valores acima do MPV. A fórmula de Bethe-Bloch
+prevê o valor mais provável de energia depositada, não a média.
+
+Para uma comparação quantitativa rigorosa com a teoria, ajusta-se uma
+distribuição de Landau em cada bin de momento (18 bins logarítmicos entre
+$0.3$ e $10~\text{GeV}/c$) e extrai-se o MPV e a sua incerteza do ajuste.
+A Figura~\ref{fig:dedx_mpv} apresenta estes pontos simulados sobrepostos
+com as curvas de Bethe-Bloch teóricas, usando os mesmos parâmetros do silício
+e a mesma espessura efectiva de $4.7~\text{mm}$.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{plots/energy/dedx_mpv_vs_momentum.png}
+  \caption{MPV do fit de Landau vs momento para piões (18 bins), kaões (17 bins)
+    e protões (18 bins). As linhas tracejadas são as curvas de Bethe-Bloch
+    teóricas para silício. Os pontos simulados reproduzem o comportamento
+    $1/\beta^2$ previsto pela teoria — queda a baixo momento, mínimo de
+    ionização em $\beta\gamma \approx 3$--$4$, e ligeiro aumento relativista
+    a alto momento. O acordo quantitativo é melhor do que na
+    Figura~\ref{fig:dedx_bb} porque o MPV é o estimador correcto para
+    comparar com Bethe-Bloch, ao contrário da média aritmética.}
+  \label{fig:dedx_mpv}
+\end{figure}
+
+Os dados de piões cobrem toda a gama de momento de $0.3$ a $10~\text{GeV}/c$
+com boa estatística (1\,600 a 8\,200 entradas por bin), confirmando o mínimo de
+ionização em $p \approx 0.5~\text{GeV}/c$ ($\text{MPV} \approx 1.54~\text{MeV}$)
+e a convergência para o MPV mínimo de $\approx 1.40~\text{MeV}$ a alto momento.
+Os kaões têm estatística mais limitada mas seguem a mesma curva de Bethe-Bloch
+com MPV superiores aos dos piões a baixo momento, como esperado pela maior
+massa ($m_K/m_\pi \approx 3.5$). Os protões exibem o comportamento mais
+pronunciado: MPV de $8.2~\text{MeV}$ em $p = 0.4~\text{GeV}/c$
+($\beta\gamma \approx 0.40$, longe do MIP) até $1.4~\text{MeV}$ a
+$p = 9~\text{GeV}/c$ ($\beta\gamma \approx 9.6$, próximo do mínimo).
+
+\subsubsection{Resolução do detetor e poder de separação entre espécies}
+\label{sec:resolucao}
+
+A Figura~\ref{fig:resolucao} apresenta a resolução relativa $\sigma/\text{MPV}$
+do ajuste de Landau em função do número do detetor, para as três espécies hadrónicas.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{plots/energy/resolucao_por_especie.png}
+  \caption{Resolução relativa $\sigma/\text{MPV}$ do fit de Landau em função
+    do número do detetor. Valores mais baixos indicam uma distribuição de
+    deposição de energia mais estreita e, portanto, melhor capacidade de
+    identificação de partículas. Os piões apresentam a melhor resolução
+    ($\sim 5\%$), seguidos dos kaões ($\sim 7\%$); os protões têm resolução
+    mais fraca ($\sim 17\%$) devido à cauda longa da distribuição de Landau
+    para partículas mais pesadas.}
+  \label{fig:resolucao}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{Resolução relativa $\sigma/\text{MPV}$ no detetor~0 para cada espécie.}
+  \label{tab:resolucao}
+  \begin{tabular}{lc}
+    \toprule
+    \textbf{Espécie} & \textbf{$\sigma$/MPV (detetor 0)} \\
+    \midrule
+    $\pi^\pm$ & $5.86\%$ \\
+    $K^\pm$   & $7.18\%$ \\
+    $p$       & $16.96\%$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+O poder de separação entre piões e protões, definido como
+$N_\sigma = |\text{MPV}_p - \text{MPV}_\pi| / \sqrt{\sigma_p^2 + \sigma_\pi^2}$,
+foi calculado para os quatro detetores (Tabela~\ref{tab:separacao}).
+
+\begin{table}[H]
+  \centering
+  \caption{Poder de separação $N_\sigma$ entre pares de espécies por detetor,
+    calculado como $N_\sigma = |\text{MPV}_2 - \text{MPV}_1| /
+    \sqrt{\sigma_1^2 + \sigma_2^2}$.}
+  \label{tab:separacao}
+  \begin{tabular}{cccc}
+    \toprule
+    \textbf{Detetor} & \textbf{$N_\sigma$ ($\pi$ vs $K$)} &
+    \textbf{$N_\sigma$ ($K$ vs $p$)} & \textbf{$N_\sigma$ ($\pi$ vs $p$)} \\
+    \midrule
+    0 & $0.18$ & $1.32$ & $1.42$ \\
+    1 & $0.12$ & $1.25$ & $1.32$ \\
+    2 & $0.12$ & $1.21$ & $1.28$ \\
+    3 & $0.13$ & $1.14$ & $1.23$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+A separação $\pi$ vs $p$ de $\sim 1.4\sigma$ no detetor~0 é insuficiente para
+PID eficiente com um único detetor (critério padrão: $> 3\sigma$). A separação
+$K$ vs $p$ é similar ($\sim 1.3\sigma$). No entanto, o resultado mais relevante
+é a separação $\pi$ vs $K$: $N_\sigma \approx 0.18$ --- praticamente zero.
+Esta separação é fisicamente impossível por dE/dx neste regime de momento.
+
+A razão é directa: a $p > 0.5~\text{GeV}/c$, os piões têm $\beta\gamma \approx
+3.6$ e os kaões $\beta\gamma \approx 1.0$, ambos na região de descida da curva
+de Bethe-Bloch onde as perdas de energia das diferentes espécies convergem
+rapidamente. A diferença de MPV é de apenas $\SI{25}{keV}$ ($1.7\%$), muito
+inferior à largura das distribuições ($\sigma_\pi \approx \SI{84}{keV}$,
+$\sigma_K \approx \SI{105}{keV}$). Esta limitação é bem conhecida em física de
+partículas: a separação $\pi/K$ por dE/dx só é viável a baixo momento
+($p \lesssim 0.5~\text{GeV}/c$), onde as curvas de Bethe-Bloch ainda divergem
+significativamente. É precisamente por esta razão que o experimento AMBER dispõe
+de detetores RICH (\textit{Ring Imaging Cherenkov}) para identificação de piões
+e kaões no regime de alto momento.
+
+\textbf{Limitação do corte de momento para protões:} o filtro $p > 0.5~\text{GeV}/c$
+foi escolhido para seleccionar partículas relativistas. Para piões
+($m = 140~\text{MeV}/c^2$) este corte corresponde a $\beta\gamma \approx 3.6$,
+próximo do mínimo de ionização — o filtro é adequado. Para protões
+($m = 938~\text{MeV}/c^2$), o mesmo corte corresponde a $\beta\gamma \approx 0.53$,
+uma região onde a perda de energia é ainda fortemente dependente de $\beta$ e
+a distribuição de Landau é mais larga e assimétrica. Isto explica parcialmente
+o $\sigma$ elevado dos protões ($0.324~\text{MeV}$) e poderá estar a subestimar
+o poder de separação real que seria obtido com protões verdadeiramente relativistas
+($p > 2~\text{GeV}/c$, $\beta\gamma > 2$). Esta é uma limitação metodológica
+identificada na análise.
+
+\subsubsection{Verificação de consistência entre runs}
+
+Para validar a reprodutibilidade da simulação, o ajuste de Landau dos piões
+no detetor~0 foi efectuado separadamente em cada um dos quatro runs
+independentes e os valores de MPV foram comparados com o resultado do ajuste
+combinado (Figura~\ref{fig:consistencia_runs}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{plots/energy/consistencia_runs.png}
+  \caption{MPV do fit de Landau de piões no detetor~0 para cada run individual
+    (pontos) e valor combinado dos 4 runs (linha tracejada azul, com banda de
+    incerteza a ponteado). O Run~0 apresenta um desvio de $+8.5\sigma$ em
+    relação ao valor combinado.}
+  \label{fig:consistencia_runs}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{MPV do fit de Landau por run e desvio em relação ao valor combinado
+    ($\text{MPV}_\text{comb} = 1.4362 \pm 0.0006~\text{MeV}$).}
+  \label{tab:consistencia}
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{Run} & \textbf{MPV (MeV)} & \textbf{Desvio ($\sigma$)} \\
+    \midrule
+    0 & $1.4490 \pm 0.0014$ & $+8.5$ \\
+    1 & $1.4374 \pm 0.0013$ & $+0.8$ \\
+    2 & $1.4410 \pm 0.0013$ & $+3.3$ \\
+    3 & $1.4382 \pm 0.0013$ & $+1.4$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Os runs 1, 2 e 3 são mutuamente consistentes ($\lesssim 3\sigma$ do valor
+combinado), o que valida a reprodutibilidade da simulação. O Run~0, porém,
+apresenta um MPV significativamente superior ($+8.5\sigma$, $+\SI{13}{keV}$),
+o que não é atribuível a flutuação estatística. A origem deste desvio não é
+determinável sem inspecção adicional dos ficheiros de configuração da simulação;
+possíveis causas incluem diferenças na semente do gerador de números aleatórios,
+na configuração do campo electromagnético, nas condições iniciais do gerador de
+partículas primárias, ou outro efeito sistemático não identificado. Qualquer
+destas hipóteses exigiria acesso à configuração interna da simulação Geant4
+para ser confirmada ou excluída --- o que está fora do âmbito desta análise.
+Este resultado demonstra a importância de verificar a consistência entre runs
+antes de combinar os dados, uma prática padrão em física experimental.
+
+
+%-----------------------------------------------------------------------------
 \subsection{Distribuição de Hits}
+%-----------------------------------------------------------------------------
 
+% ============================================================
+% INSTRUÇÕES PARA O COLEGA RESPONSÁVEL POR ESTA SECÇÃO:
+%   - Descrever o mapeamento espacial (X, Y) dos hits nos quatro detetores.
+%   - Separar partículas carregadas de neutras (usando o PDG code).
+%   - Incluir figuras com a distribuição 2D (ou 1D) de X e Y por detetor.
+%   - Comparar a distribuição de hits entre espécies de partículas.
+%   - Formato sugerido: 2–3 subsubsections + figuras + tabela resumo.
+% ============================================================
+
+\subsubsection{Distribuição espacial dos hits}
+
+% Inserir figura e descrição aqui.
+
+\subsubsection{Separação carregadas vs.\ neutras}
+
+% Inserir figura e descrição aqui.
+
+%-----------------------------------------------------------------------------
 \subsection{Vértices Hadrónicos}
+%-----------------------------------------------------------------------------
 
+% ============================================================
+% INSTRUÇÕES PARA O COLEGA RESPONSÁVEL POR ESTA SECÇÃO:
+%   - Analisar a posição longitudinal Z dos vértices hadrónicos.
+%   - Distinguir vértices primários (IsPrimary=1) de secundários (IsPrimary=0).
+%   - Incluir histograma de vertexPosZ_cm.
+%   - Comparar com a geometria do alvo AMBER (posição e extensão longitudinal).
+%   - Formato sugerido: 2 subsubsections + figuras + tabela ou texto descritivo.
+% ============================================================
+
+\subsubsection{Vértices primários}
+
+% Inserir figura e descrição aqui.
+
+\subsubsection{Vértices secundários}
+
+% Inserir figura e descrição aqui.
+
+%-----------------------------------------------------------------------------
 \subsection{Distribuição Temporal}
+%-----------------------------------------------------------------------------
 
+% ============================================================
+% INSTRUÇÕES PARA O COLEGA RESPONSÁVEL POR ESTA SECÇÃO:
+%   - Analisar a distribuição dos tempos de chegada dos hits por detetor.
+%   - Identificar a estrutura temporal do feixe (RF bucket, janela de tempo).
+%   - Comparar distribuições temporais entre espécies de partículas.
+%   - Formato sugerido: 2 subsubsections + figuras.
+% ============================================================
+
+\subsubsection{Distribuição de tempos por detetor}
+
+% Inserir figura e descrição aqui.
+
+\subsubsection{Estrutura temporal do feixe}
+
+% Inserir figura e descrição aqui.
+
+%-----------------------------------------------------------------------------
 \subsection{Distribuição do Momento}
+%-----------------------------------------------------------------------------
 
 Nesta secção, é apresentada a análise da componente longitudinal do momento ($p_Z$) das partículas detetadas na simulação. A análise foca-se nos muões ($\mu^{\pm}$) e piões ($\pi^{\pm}$), e explora adicionalmente a distinção crucial entre piões primários (gerados na colisão inicial do feixe com o alvo) e secundários (produzidos em interações secundárias ou decaimentos).
 
@@ -42,20 +830,20 @@ A Figura~\ref{fig:momentum_muons_pions} apresenta os espectros de momento longit
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.85\textwidth]{../plots/momentum/momentum_muons_pions.png}
+    \includegraphics[width=0.85\textwidth]{plots/momentum/momentum_muons_pions.png}
     \caption{Distribuição do momento longitudinal ($p_Z$) para muões ($\mu^{\pm}$) e piões ($\pi^{\pm}$).}
     \label{fig:momentum_muons_pions}
 \end{figure}
 
 Observa-se que os piões constituem a larga maioria das trajetórias produzidas na simulação, estendendo-se por uma vasta gama de momentos até cerca de $200$~GeV/c. Por outro lado, os muões apresentam um espectro muito mais concentrado em momentos baixos e intermédios: a maioria encontra-se abaixo de alguns GeV/c, embora exista uma cauda estatística rara para momentos superiores. Esta distinção é consistente com a natureza das partículas: os piões, sendo mesões que sofrem interação forte, são massivamente produzidos em colisões hadrónicas de alta energia, enquanto os muões são sobretudo resultantes de decaimentos ou processos eletromagnéticos de menor transferência de momento.
 
-\subsubsection{Piões Primários vs. Secundários}
+\subsubsection{Piões Primários vs.\ Secundários}
 
 A comparação entre o momento dos piões primários e secundários é exibida na Figura~\ref{fig:momentum_pions_generation}.
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.85\textwidth]{../plots/momentum/momentum_pions_generation.png}
+    \includegraphics[width=0.85\textwidth]{plots/momentum/momentum_pions_generation.png}
     \caption{Comparação da distribuição do momento longitudinal ($p_Z$) para piões primários (geração direta) e secundários.}
     \label{fig:momentum_pions_generation}
 \end{figure}
@@ -66,6 +854,726 @@ A análise revela uma distinção física muito nítida entre as duas categorias
     \item \textbf{Piões Secundários:} São muito mais numerosos na simulação, mas o seu momento longitudinal está fortemente concentrado em energias baixas, com a grande maioria abaixo de algumas dezenas de GeV/c e uma cauda de alta energia menos populada. Isto deve-se ao facto de serem gerados em colisões hadrónicas secundárias em cascata (por exemplo, interações inelásticas do tipo \textit{pi-Inelastic} no interior ou na vizinhança do alvo), onde a energia do feixe é progressivamente partilhada por múltiplas partículas filhas de menor momento.
 \end{itemize}
 
+%-----------------------------------------------------------------------------
+\subsection{Identificação de Partículas por Aprendizagem Automática}
+\label{sec:pid_ml}
+%-----------------------------------------------------------------------------
+
+Complementarmente à análise baseada na fórmula de Bethe-Bloch, implementou-se
+um classificador de aprendizagem automática (\textit{machine learning}) para
+identificação de partículas. A metodologia é conceptualmente relacionada com
+abordagens usadas em experimentos do CERN: o sistema \textbf{ProbNN} do
+LHCb~\cite{lhcb_pid} usa \textit{Gradient Boosted Decision Trees} combinando
+múltiplos sub-detectores, e o \textbf{ALICE TPC}~\cite{alice_pid} usa redes
+neuronais para separar $\pi/K/p$ por dE/dx no gás --- o mesmo problema físico
+fundamental, embora em detetor de gás com muito maior estatística e
+sub-detectores adicionais que aqui não estão disponíveis. O \textit{framework}
+TMVA do ROOT usa arquitecturas BDT similares às implementadas via
+\texttt{sklearn} neste trabalho.
+
+A abordagem escolhida foi um \textit{Histogram-based Gradient Boosting
+Classifier}~\cite{sklearn}, variante moderna e eficiente do Gradient Boosting
+que combina sequencialmente árvores de decisão rasas, usando histogramas
+pré-computados para acelerar o treino. A análise foi estruturada em duas fases.
+
+\subsubsection{Fase 1 — Análise exploratória a 3 classes (π, K, p)}
+
+As variáveis de entrada (\textit{features}) são a deposição de energia em cada
+um dos quatro detetores ($E_\text{dep,0}$--$E_\text{dep,3}$, em keV) e o
+momento ($p$, em GeV/$c$). A variável-alvo tem três classes:
+$y = 0$ (pião, $|\text{PDG}| = 211$), $y = 1$ (kaão, $|\text{PDG}| = 321$)
+e $y = 2$ (protão, $\text{PDG} = 2212$). Aplicaram-se os filtros das
+análises anteriores ($E_{\text{dep,0}} > \SI{10}{keV}$,
+$p > 0.5~\text{GeV}/c$), obtendo $125\,362$ eventos ($75\%$ piões,
+$19\%$ protões, $6\%$ kaões).
+
+O forte desequilíbrio entre classes (kaões são apenas $\sim 6\%$ do dataset)
+foi corrigido com \textit{sample weights} balanceados proporcionalmente ao
+inverso da frequência de cada classe, evitando que o classificador ignore as
+espécies minoritárias. Os dados foram divididos em treino ($70\%$) e teste
+($30\%$) com estratificação. O classificador foi treinado com $300$ iterações,
+taxa de aprendizagem $\eta = 0.05$, profundidade máxima $d = 4$ e mínimo de
+$20$ amostras por folha.
+
+Para validar a estabilidade do modelo efectuou-se uma validação cruzada
+estratificada com 5 \textit{folds} (Figura~\ref{fig:ml_cv}), obtendo
+AUC macro = $0.8456 \pm 0.0021$ e \textit{accuracy} balanceada estável
+entre folds. A baixa variância confirma que não há sobre-ajuste ao split
+treino/teste.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.78\textwidth]{plots/energy/ml_cv_scores.png}
+  \caption{Scores de AUC macro (OvR) e accuracy por fold na validação
+    cruzada estratificada a 5 folds. A pequena variância entre folds
+    ($\sigma_\text{AUC} = 0.002$) confirma a estabilidade do modelo.}
+  \label{fig:ml_cv}
+\end{figure}
+
+\subsubsection{Desempenho do classificador}
+
+O classificador obteve AUC macro (one-vs-rest) de $\mathbf{0.8442}$ e
+\textit{balanced accuracy} de $\mathbf{65.4\%}$ no conjunto de teste
+(vs.\ baseline aleatório de $33.3\%$ para 3 classes).
+A Tabela~\ref{tab:ml_auc} apresenta as AUC por classe.
+
+\begin{table}[H]
+  \centering
+  \caption{AUC one-vs-rest por classe no conjunto de teste.}
+  \label{tab:ml_auc}
+  \begin{tabular}{lc}
+    \toprule
+    \textbf{Classe} & \textbf{AUC (OvR)} \\
+    \midrule
+    $\pi^\pm$ & $0.8763$ \\
+    $K^\pm$   & $0.7264$ \\
+    $p$       & $0.9300$ \\
+    \midrule
+    Macro     & $0.8442$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+A hierarquia de AUC — protões ($0.93$) $>$ piões ($0.88$) $>$ kaões ($0.73$)
+— é fisicamente coerente e complementa directamente os resultados da análise
+de Bethe-Bloch: a separação $\pi/p$ é a mais fácil ($N_\sigma \approx 1.4$
+por detetor, AUC 0.93), enquanto a separação $\pi/K$ é praticamente impossível
+($N_\sigma \approx 0.18$, AUC 0.73). O modelo de ML \emph{confirma
+quantitativamente} a conclusão analítica.
+
+\textbf{Nota crítica sobre os kaões:} a \textit{precision} dos kaões é de
+apenas $10.4\%$, ou seja, 9 em cada 10 eventos classificados como ``kaão'' são
+na realidade piões. \emph{Isto não é uma falha do algoritmo — é a confirmação
+computacional de que a separação $\pi/K$ é fisicamente impossível por dE/dx a
+$p > 0.5~\text{GeV}/c$.} Nenhum algoritmo, por mais sofisticado que seja,
+extrai informação que a física não contém nos dados: a força do \textit{sample
+weight} ``obrigou'' o modelo a tentar classificar kaões, mas a física
+(Bethe-Bloch, $N_\sigma = 0.18$) impediu-o de o fazer com qualquer precisão
+útil. Esta análise exploratória motiva a restrição do classificador na Fase~2.
+
+A Figura~\ref{fig:ml_roc_cm} apresenta as curvas ROC (uma por classe, OvR)
+e a matriz de confusão normalizada $3 \times 3$. A curva dos protões afasta-se
+claramente da diagonal; a dos kaões é a mais próxima da diagonal, reflexo da
+sua difícil separação por dE/dx. A matriz de confusão revela que a principal
+fonte de erro são kaões classificados como piões, consistente com a sobreposição
+das suas distribuições de Landau (diferença de MPV de apenas $1.7\%$).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.97\textwidth]{plots/energy/ml_roc_curve.png}
+  \caption{Esquerda: curvas ROC one-vs-rest para as três classes. A caixa
+    apresenta os resultados de validação cruzada. Direita: matriz de confusão
+    normalizada ($3\times 3$) no conjunto de teste. A confusão principal
+    ocorre entre piões e kaões, consistente com a análise de Bethe-Bloch
+    ($N_\sigma(\pi/K) \approx 0.18$).}
+  \label{fig:ml_roc_cm}
+\end{figure}
+
+\subsubsection{Importância das variáveis}
+
+A importância de cada variável foi medida por \textit{permutation importance}:
+avalia-se quanto a \textit{balanced accuracy} degrada quando uma feature é
+permutada aleatoriamente (15 repetições, amostra de 3 000 eventos do conjunto
+de teste). Este estimador é mais robusto do que a importância baseada em ganho
+de impureza, pois reflecte o impacto real no desempenho do modelo.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{plots/energy/ml_feature_importance.png}
+  \caption{Permutation importance das variáveis de entrada (queda em
+    \textit{balanced accuracy}, média $\pm$ desvio-padrão de 15 repetições).
+    O momento é a variável mais discriminativa, seguido da deposição no
+    detetor~0, consistente com a dependência $\beta\gamma = p/(mc)$ da
+    fórmula de Bethe-Bloch.}
+  \label{fig:ml_features}
+\end{figure}
+
+O momento $p$ é a variável dominante, o que tem duas componentes físicas
+distintas: por um lado, é a variável que entra directamente no parâmetro
+$\beta\gamma = p/(mc)$ da equação de Bethe-Bloch, determinando a posição de
+cada espécie na curva de dE/dx; por outro lado, em dados simulados, a
+distribuição de momento difere entre espécies por razões cinemáticas (piões
+são maioritariamente o feixe primário, com espectro de alto momento; protões
+são secundários de interações hadrónicas, com maior abundância a baixo momento).
+O modelo pode explorar ambas as contribuições, pelo que a dominância do momento
+não reflete exclusivamente a física de dE/dx.
+É por esta razão que a análise por bins de momento sem o uso do momento como
+variável (Secção~\ref{sec:pid_ml}, AUC vs.\ momento) é o teste fisicamente
+mais rigoroso da separação genuinamente baseada em deposição de energia.
+A deposição no detetor~0 ocupa o segundo lugar; os detetores 1--3 têm
+importância decrescente mas positiva, confirmando que a combinação de vários
+detetores melhora a separação relativamente a um único detetor.
+
+\subsubsection{Fronteira de decisão}
+
+A Figura~\ref{fig:ml_boundary} mostra as regiões de decisão no espaço 2D
+dE/dx (detetor~0) vs momento, usando uma amostra estratificada de $5\,000$
+eventos. As três regiões de cor correspondem às três classes; as linhas
+tracejadas são as fronteiras de decisão ($P_\text{classe} = 0.5$).
+
+\textbf{Nota metodológica:} o gráfico representa uma projecção 2D de um
+espaço de 5 dimensões (4 detetores + momento). Para calcular a fronteira de
+decisão no plano dE/dx(Det.\,0) vs momento, as deposições nos detetores~1--3
+foram fixadas nos respectivos valores medianos do conjunto de treino
+($\tilde{E}_1$, $\tilde{E}_2$, $\tilde{E}_3$). Esta visualização é
+aproximada: em dados reais os detetores~1--3 variam em simultâneo com o
+detetor~0, pelo que a fronteira efectiva pode diferir da representada.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{plots/energy/ml_decision_boundary.png}
+  \caption{Fronteira de decisão a 3 classes no plano dE/dx (detetor~0, MeV)
+    vs momento (amostra de $5\,000$ eventos). As regiões coloridas indicam
+    a classe predita; os pontos são os eventos reais. A sobreposição entre
+    piões (vermelho) e kaões (ciano) na mesma região de decisão evidencia a
+    impossibilidade física de separar estas espécies por dE/dx a
+    $p > 0.5~\text{GeV}/c$.}
+  \label{fig:ml_boundary}
+\end{figure}
+
+Em síntese, o classificador de aprendizagem automática confirma e quantifica
+os resultados da análise de Bethe-Bloch: a separação $\pi/p$ é eficaz
+(AUC $= 0.93$), a separação $K/p$ é razoável (AUC $= 0.73$) e a separação
+$\pi/K$ é fisicamente impossível por dE/dx a este regime de momento ---
+justificando o uso de detetores RICH no experimento AMBER.
+
+\subsubsection{Curva eficiência-pureza e pontos de operação}
+
+Num experimento real o threshold de decisão não é fixado em $0.5$: o físico
+escolhe o \textit{operating point} em função dos objectivos da análise.
+Uma análise de taxa de decaimento rara exige alta pureza (poucos falsos
+positivos), mesmo que isso implique perder eficiência; uma análise de secção
+eficaz inclusiva prefere alta eficiência.
+
+A Figura~\ref{fig:ml_effpur} apresenta a curva eficiência-pureza para a
+identificação de protões (\textit{precision-recall curve}), com três pontos de
+operação assinalados. A Tabela~\ref{tab:ml_operacao} resume os valores.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{plots/energy/ml_efficiency_purity.png}
+  \caption{Esquerda: curva eficiência-pureza para identificação de protões
+    (classificação π vs p). Os três marcadores correspondem aos pontos de
+    operação da Tabela~\ref{tab:ml_operacao}. Direita: pureza, eficiência e
+    F1-score em função do threshold de decisão; o threshold padrão de $0.5$
+    está assinalado a pontilhado.}
+  \label{fig:ml_effpur}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{Pontos de operação do classificador π vs p: pureza alvo,
+    eficiência correspondente e threshold óptimo.}
+  \label{tab:ml_operacao}
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{Pureza alvo} & \textbf{Eficiência} & \textbf{Threshold} \\
+    \midrule
+    $90\%$ & $52.6\%$ & $0.889$ \\
+    $95\%$ & $40.6\%$ & $0.942$ \\
+    $99\%$ & $22.5\%$ & $0.990$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsubsection{AUC por bin de momento — validade do método}
+
+O gráfico mais relevante para avaliar a aplicabilidade prática do método é a
+AUC em função do momento (Figura~\ref{fig:ml_auc_mom}). Para este teste,
+treinou-se um classificador binário $\pi$ vs $p$ independente em cada bin de
+momento, usando \emph{apenas} a deposição de energia nos quatro detetores como
+variáveis de entrada --- sem o momento, pois num detector real esse valor seria
+fornecido pelo espectrómetro magnético. Esta configuração replica o cenário de
+utilização real.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{plots/energy/ml_auc_vs_momentum.png}
+  \caption{AUC do classificador $\pi$ vs $p$ (só dE/dx, sem momento)
+    em função do bin de momento. O tamanho dos marcadores é proporcional
+    ao número de eventos por bin. A degradação de AUC $\approx 0.99$ a
+    $p < 1~\text{GeV}/c$ para AUC $\approx 0.53$ a $p > 5~\text{GeV}/c$
+    confirma quantitativamente o limite físico da identificação por dE/dx:
+    quando as partículas são ultrarelativistas, as curvas de Bethe-Bloch
+    convergem e nenhum algoritmo consegue separá-las.}
+  \label{fig:ml_auc_mom}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{AUC do classificador dE/dx por bin de momento (π vs p,
+    sem momentum como feature). A última coluna indica o regime físico.}
+  \label{tab:ml_auc_mom}
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Bin de momento} & \textbf{AUC} & \textbf{Eventos} & \textbf{Regime} \\
+    \midrule
+    $0.5$--$1.0~\text{GeV}/c$ & $0.9862$ & $37\,426$ & descida Bethe-Bloch \\
+    $1.0$--$2.0~\text{GeV}/c$ & $0.9335$ & $34\,734$ & próximo do MIP \\
+    $2.0$--$5.0~\text{GeV}/c$ & $0.7233$ & $27\,211$ & região MIP \\
+    $>5.0~\text{GeV}/c$       & $0.5292$ & $10\,276$ & ultrarelativista \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Este resultado tem uma interpretação física directa: a AUC colapsa para
+$\approx 0.53$ (essencialmente aleatório) exactamente onde a fórmula de
+Bethe-Bloch prevê que as curvas de dE/dx das duas espécies convergem
+($p \gtrsim 5~\text{GeV}/c$, $\beta\gamma \gtrsim 5$ para piões e
+$\beta\gamma \gtrsim 5.3$ para protões). O algoritmo de ML não consegue
+extrair informação que a física não contém nos dados --- e este resultado
+demonstra-o de forma quantitativa e inequívoca.
+
+\subsubsection{Curvas de aprendizagem}
+
+A Figura~\ref{fig:ml_learning} apresenta as curvas de aprendizagem de
+ambas as fases — \textit{balanced accuracy} no conjunto de treino e na
+validação cruzada em função do número de eventos utilizados.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/ml_learning_curves_fase1.png}
+    \caption{Fase~1 (3 classes: $\pi$, $K$, $p$)}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{plots/energy/ml_learning_curves_fase2.png}
+    \caption{Fase~2 ($\pi$ vs $p$, domínio restrito)}
+  \end{subfigure}
+  \caption{Curvas de aprendizagem (\textit{balanced accuracy} em treino e
+    validação cruzada 5-fold em função do tamanho do conjunto de treino).
+    Em ambas as fases a curva de validação (laranja) converge para a de
+    treino (azul) sem gap significativo — confirma ausência de overfitting.
+    A Fase~2 atinge valores mais elevados ($\approx 0.93$) e com menor
+    variância, reflectindo o ganho da restrição do domínio.
+    A estabilização das curvas indica que mais dados produziria apenas
+    ganhos marginais: o modelo está bem ajustado ao dataset disponível.}
+  \label{fig:ml_learning}
+\end{figure}
+
+%-----------------------------------------------------------------------------
+\subsubsection{Fase 2 — Classificador de produção (π vs p, $p \in [0.5, 2.0]$ GeV/$c$)}
+%-----------------------------------------------------------------------------
+
+A análise exploratória da Fase~1 identificou duas limitações que motivam a
+restrição do domínio:
+\begin{enumerate}
+  \item A separação $\pi/K$ é fisicamente impossível — os kaões são removidos.
+  \item Acima de $2~\text{GeV}/c$ a AUC colapsa para $\approx 0.53$ (aleatório)
+    — o limite superior do domínio é fixado em $p_\text{max} = 2.0~\text{GeV}/c$.
+\end{enumerate}
+
+O classificador de produção é binário ($y = 0$: pião, $y = 1$: protão) e
+opera exclusivamente em $p \in [0.5, 2.0]~\text{GeV}/c$.
+Fora deste intervalo, os eventos são marcados como \emph{``não classificável
+por dE/dx''} e o classificador não é aplicado.
+
+\textbf{Limitação física conhecida:} a $p \in [0.5, 1.0]~\text{GeV}/c$, os
+protões têm $\beta\gamma \in [0.53, 1.07]$, o que significa que \emph{não são
+completamente relativistas}. A distribuição de Landau é uma aproximação nesta
+região: a boa discriminação existe parcialmente porque protões não-relativistas
+têm distribuições de dE/dx mais largas e deslocadas, o que ajuda o classificador,
+mas não exclusivamente pela física de Landau ``pura''. Um filtro mais rigoroso
+seria $p > 1.0~\text{GeV}/c$ para protões ($\beta\gamma > 1.07$), ao custo de
+reduzir substancialmente a amostra.
+
+\textbf{Limitação de dados:} não existe informação sobre a direcção da
+\textit{track} (ângulo $\theta$) na árvore \texttt{tracksData}. Num detector
+real aplicar-se-ia a correcção de comprimento de caminho
+$L_\text{eff} = L_0 / \cos\theta$, que corrige a deposição de energia em
+função do ângulo de incidência. Esta correcção é padrão no LHCb e no ALICE
+mas não é realizável com os dados disponíveis --- constitui uma limitação
+identificada que seria resolvida com o acesso à reconstrução completa das
+\textit{tracks}.
+
+\paragraph*{Resultados}
+
+O classificador de produção foi treinado em $50\,512$ eventos e avaliado em
+$21\,648$ eventos de teste. A Tabela~\ref{tab:ml_compare} compara os resultados
+das duas fases.
+
+\begin{table}[H]
+  \centering
+  \caption{Comparação indicativa entre a análise exploratória (Fase~1,
+    3~classes) e o classificador de produção (Fase~2, binário).
+    \textbf{Nota:} as duas fases resolvem problemas diferentes e a comparação
+    directa das métricas não é estritamente justa --- a Fase~1 inclui kaões
+    (cuja separação é fisicamente impossível por dE/dx, reduzindo todas as
+    métricas), enquanto a Fase~2 remove precisamente esses casos intratáveis.
+    O objectivo da tabela é ilustrar o ganho resultante da restrição do
+    domínio, não estabelecer uma comparação de desempenho em igualdade de
+    condições.}
+  \label{tab:ml_compare}
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Métrica} & \textbf{Fase 1} (3 classes) &
+    \textbf{Fase 2} (π vs p) \\
+    \midrule
+    AUC                    & $0.8442$ (macro OvR) & $\mathbf{0.9748}$ \\
+    Balanced accuracy      & $65.4\%$             & $\mathbf{92.8\%}$  \\
+    Recall protões         & $78.9\%$             & $\mathbf{95.4\%}$  \\
+    Precision piões        & $96.0\%$             & $\mathbf{98.3\%}$  \\
+    CV AUC ($\pm\sigma$)   & $0.846 \pm 0.002$    & $\mathbf{0.976 \pm 0.0004}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+A melhoria é substancial em todas as métricas. A variância do CV de apenas
+$\sigma_\text{AUC} = 0.0004$ confirma que o classificador de produção é
+extremamente estável — não há overfitting e o resultado é reprodutível.
+
+A Figura~\ref{fig:ml_binary_roc} apresenta a curva ROC e a matriz de confusão
+do classificador de produção.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.97\textwidth]{plots/energy/ml_binary_roc.png}
+  \caption{Esquerda: curva ROC do classificador de produção
+    ($\pi$ vs $p$, $p \in [0.5, 2.0]~\text{GeV}/c$, AUC $= 0.9748$).
+    A caixa amarela resume os resultados de validação cruzada.
+    Direita: matriz de confusão $2\times 2$ normalizada. A taxa de erro
+    é $< 5\%$ para piões e $< 5\%$ para protões.}
+  \label{fig:ml_binary_roc}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.78\textwidth]{plots/energy/ml_binary_cv.png}
+  \caption{Scores de AUC e accuracy por fold na validação cruzada do
+    classificador de produção. A variância extremamente baixa
+    ($\sigma_\text{AUC} = 0.0004$) confirma a estabilidade do modelo.}
+  \label{fig:ml_binary_cv}
+\end{figure}
+
+A Figura~\ref{fig:ml_binary_effpur} apresenta os pontos de operação do
+classificador, que permitem ao físico escolher o trade-off entre pureza e
+eficiência em função dos objectivos da análise.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.97\textwidth]{plots/energy/ml_binary_effpur.png}
+  \caption{Curva eficiência-pureza do classificador de produção com pontos
+    de operação a 90\%, 95\% e 99\% de pureza (esquerda) e variação de
+    pureza, eficiência e F1-score com o threshold de decisão (direita).
+    A 95\% de pureza, a eficiência é de $54\%$; a 90\% de pureza,
+    a eficiência sobe para $72\%$.}
+  \label{fig:ml_binary_effpur}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{Pontos de operação do classificador de produção (π vs p,
+    $p \in [0.5, 2.0]~\text{GeV}/c$).}
+  \label{tab:ml_op_prod}
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{Pureza alvo} & \textbf{Eficiência} & \textbf{Threshold} \\
+    \midrule
+    $90\%$ & $72.3\%$ & $0.862$ \\
+    $95\%$ & $53.9\%$ & $0.938$ \\
+    $99\%$ & $23.7\%$ & $0.993$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+A Figura~\ref{fig:ml_binary_features} mostra a importância das variáveis por
+\textit{permutation importance} (queda em AUC quando cada variável é
+permutada aleatoriamente).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{plots/energy/ml_binary_features.png}
+  \caption{Permutation importance das variáveis no classificador de produção
+    (15 repetições, amostra de $3\,000$ eventos). O momento continua a ser
+    a variável dominante, seguido da deposição no detetor~0. As barras de
+    erro reflectem a variabilidade entre as 15 permutações.}
+  \label{fig:ml_binary_features}
+\end{figure}
+
+A Figura~\ref{fig:ml_binary_boundary} mostra a fronteira de decisão no
+domínio restrito $p \in [0.5, 2.0]~\text{GeV}/c$.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{plots/energy/ml_binary_boundary.png}
+  \caption{Fronteira de decisão do classificador de produção no domínio
+    válido $p \in [0.5, 2.0]~\text{GeV}/c$ (amostra de $5\,000$ eventos).
+    A separação entre piões (vermelho) e protões (magenta) é visível e
+    fisicamente consistente: a baixo momento os protões depositam muito mais
+    energia; a $p \approx 2.0~\text{GeV}/c$ as distribuições começam a
+    sobrepor-se, motivando o limite superior do domínio.
+    As deposições nos detetores~1--3 foram fixadas nos valores medianos do
+    conjunto de treino para gerar a grelha de decisão 2D (ver nota na
+    Secção~\ref{sec:pid_ml}).}
+  \label{fig:ml_binary_boundary}
+\end{figure}
+
+%-----------------------------------------------------------------------------
+\subsection{Perspectivas e Relevância Prática}
+\label{sec:ml_perspectivas}
+%-----------------------------------------------------------------------------
+
+\subsubsection{Contexto: enquadramento metodológico}
+
+Para contextualizar a abordagem adoptada, é útil referir sistemas de PID
+por aprendizagem automática em uso em experimentos do CERN que usam princípios
+semelhantes. O sistema \textbf{ProbNN} do LHCb~\cite{lhcb_pid} combina
+informação de múltiplos sub-detectores (RICH, calorímetros, sistema de muões e
+TPC) num classificador de \textit{Gradient Boosted Decision Trees}, arquitectura
+similar à utilizada neste trabalho, embora em escala e complexidade muito
+superiores. O experimento ALICE usa redes neuronais no TPC para separar
+$\pi/K/p$ por dE/dx no gás~\cite{alice_pid} --- o mesmo problema físico
+fundamental, num detetor de gás em vez de silício.
+
+O trabalho aqui apresentado é uma demonstração académica em dados de simulação
+do mesmo princípio físico subjacente, sendo a comparação estritamente
+metodológica: este trabalho não replica nem se aproxima da escala, complexidade
+ou condições de dados reais desses sistemas.
+
+\subsubsection{Extensões necessárias para validação experimental}
+
+A transição de uma ferramenta treinada em simulação para um sistema de
+produção num detector real requer passos adicionais que não são
+realizáveis neste trabalho por ausência dos dados necessários, mas que
+ilustram os requisitos de uma eventual extensão a um contexto experimental real:
+
+\begin{enumerate}
+
+  \item \textbf{Amostras de controlo com label real.}
+    Em simulação o PDG code fornece o label verdadeiro de cada partícula.
+    Num detector real o label nunca é conhecido directamente. A solução padrão
+    é usar \textit{amostras de controlo cinemáticas}: regiões do espaço de
+    fase onde a espécie é conhecida com alta pureza por conservação de energia
+    e momento, sem informação de PID. Exemplos típicos:
+    $K^0_S \to \pi^+\pi^-$ (fonte limpa de piões),
+    $\Lambda^0 \to p\pi^-$ (fonte limpa de protões).
+    Com tais amostras, um modelo futuro poderia, em princípio, ser adaptado
+    a dados reais — um passo que excede o âmbito e os recursos deste trabalho.
+
+  \item \textbf{Monitorização e re-treino periódico.}
+    As propriedades do detector mudam com o tempo: deriva de calibração,
+    envelhecimento dos sensores, acumulação de dose de radiação e variações
+    de temperatura alteram a resposta em dE/dx. Um sistema de produção
+    monitoriza continuamente a estabilidade do classificador e re-treina
+    quando o desempenho degrada além de um limiar definido.
+
+  \item \textbf{Quantificação de incertezas sistemáticas.}
+    A diferença entre simulação e dados reais (\textit{simulation-to-data gap})
+    introduz uma incerteza sistemática no desempenho do classificador. O
+    procedimento padrão consiste em variar os parâmetros da simulação dentro
+    das suas incertezas e medir a variação resultante no AUC --- esta variação
+    é adicionada como incerteza sistemática ao resultado final da análise física.
+
+\end{enumerate}
+
+\subsubsection{Melhorias algorítmicas identificadas}
+
+Para além dos dados, três melhorias algorítmicas tornariam o classificador
+mais eficaz:
+
+\begin{itemize}
+
+  \item \textbf{Classificador por bin de momento.}
+    A Figura~\ref{fig:ml_auc_mom} demonstra que um único classificador global
+    é dominado pelos eventos de baixo momento (onde a separação é fácil),
+    mascarando a sua fraca performance a alto momento. Classificadores
+    especializados por bin de momento, como os treinados neste trabalho para
+    fins de validação, produziriam uma separação óptima em cada regime
+    cinemático.
+
+  \item \textbf{Redes neuronais profundas.}
+    Os sistemas de PID modernos, como o \textbf{PID-GNN} do LHCb (2022),
+    usam redes neuronais de grafos (\textit{Graph Neural Networks}) que
+    modelam correlações entre partículas na mesma colisão ---
+    informação que um classificador por partícula individual não usa.
+    Para os quatro detetores do AMBER Target, uma rede neuronal densa
+    com normalização por lote (\textit{batch normalization}) seria uma
+    direcção possível de desenvolvimento futuro, dependente de dados de
+    maior dimensão e de validação experimental adequada.
+
+  \item \textbf{Calibração do classificador (\textit{calibration}).}
+    A probabilidade $P(\text{protão} | \mathbf{x})$ produzida pelo modelo
+    deve ser interpretável como uma probabilidade real. O Gradient Boosting
+    é notoriamente mal calibrado: o valor $0.8$ não significa $80\%$ de
+    probabilidade de ser um protão. A calibração isotónica ou de Platt
+    (\texttt{CalibratedClassifierCV} do sklearn) corrigiria este problema,
+    tornando os scores directamente utilizáveis como estimativas de
+    probabilidade em análises de máxima verossimilhança.
+
+\end{itemize}
+
+\subsubsection{Síntese}
+
+Em dados de simulação Geant4, a aprendizagem automática mostrou-se uma
+ferramenta eficaz para PID num detector de silício do tipo AMBER Target,
+com AUC $\approx 0.99$ na região de baixo momento ($p < 1~\text{GeV}/c$)
+onde a separação por dE/dx é fisicamente possível. O classificador reproduz
+quantitativamente a degradação da separação prevista pela fórmula de
+Bethe-Bloch, incluindo o colapso para AUC $\approx 0.53$ (essencialmente
+aleatório) quando as curvas de dE/dx das duas espécies convergem a
+$p > 5~\text{GeV}/c$. Este resultado ilustra, à escala académica e em condições simplificadas,
+o mesmo princípio físico subjacente aos sistemas de PID por aprendizagem
+automática em uso no LHCb e no ALICE, sem que esta comparação constitua
+uma equivalência funcional ou uma validação para operação real.
+As extensões necessárias para qualquer aplicação em dados reais ---
+identificadas na Secção~\ref{sec:ml_perspectivas} --- dependeriam de dados
+de calibração reais, validação experimental sistemática e recursos fora do
+âmbito deste trabalho.
+
+%=============================================================================
 \section{Conclusão}
+%=============================================================================
+
+Este trabalho apresentou a simulação e análise do detetor AMBER Target usando
+Geant4, com análise em macros ROOT e Python (\texttt{uproot}/\texttt{scikit-learn}),
+sobre dados de quatro runs independentes totalizando
+$3.31 \times 10^6$ tracks ($3\,311\,783$).
+
+\textbf{Composição do feixe e natureza das partículas.}
+A utilização do campo \texttt{IsPrimary} revelou que o feixe primário é
+constituído exclusivamente por $3\,485$ piões carregados ($0.1\%$ do total),
+consistente com a operação do AMBER com um feixe de $\pi^\pm$ do SPS.
+A totalidade das restantes espécies observadas --- $e^\pm$, $\gamma$, $p$,
+$K^\pm$ e $\mu^\pm$ --- são partículas secundárias produzidas nas interações
+hadrónicas e electromagnéticas dos piões primários no alvo activo, numa
+multiplicidade de $\sim 1000$ secundários por pião incidente.
+
+\textbf{Deposição de energia e compatibilidade com Bethe-Bloch.}
+As distribuições de Landau foram ajustadas para piões, kaões e protões em
+todos os quatro detetores. O MPV decresce $\SI{8}{keV}$ por detetor para piões,
+consistente com a equação de Bethe-Bloch, e aumenta com a massa da partícula
+($\pi^\pm \to K^\pm \to p$), reproduzindo a dependência em $1/\beta^2$ prevista
+pela teoria. A comparação directa das curvas teóricas de Bethe-Bloch (calculadas
+para silício, PDG 2022) com os dados simulados mostra acordo satisfatório na
+região $p < 5~\text{GeV}/c$, com uma espessura efectiva do detetor de
+$4.7~\text{mm}$ inferida dos dados. A verificação da consistência entre runs
+identificou um desvio sistemático no Run~0 ($+8.5\sigma$, $+\SI{13}{keV}$)
+cuja origem exacta não foi determinada, sublinhando a importância da
+validação run-a-run antes da combinação dos dados.
+
+\textbf{Capacidade de identificação de partículas (PID).}
+A análise quantitativa do poder de separação revelou dois regimes distintos.
+A separação $\pi^\pm$ vs $p$ e $K^\pm$ vs $p$ é de $\sim 1.3$--$1.4\sigma$
+num único detetor --- insuficiente para PID standalone (critério padrão:
+$> 3\sigma$), mas potencialmente melhorável com a combinação dos quatro detetores.
+A separação $\pi^\pm$ vs $K^\pm$ é praticamente nula ($N_\sigma \approx 0.18$):
+a $p > 0.5~\text{GeV}/c$, ambas as espécies convergem para o mínimo de ionização
+da curva de Bethe-Bloch e a diferença de MPV ($\SI{25}{keV}$) é muito inferior
+à largura das distribuições. Este resultado confirma que a identificação
+$\pi/K$ a alto momento requer detetores RICH, como efectivamente implementado
+no AMBER.
+
+\textbf{Identificação por aprendizagem automática.}
+O classificador de \textit{Gradient Boosting} treinado sobre os dados simulados
+demonstrou que a separação $\pi/p$ por dE/dx é quantitativamente viável em
+$p \in [0.5, 2.0]~\text{GeV}/c$, com AUC $= 0.975$ e \textit{balanced accuracy}
+$= 92.8\%$. O comportamento do classificador é fisicamente coerente: a AUC
+decresce de $\approx 0.99$ a $p < 1~\text{GeV}/c$ para $\approx 0.53$
+(essencialmente aleatório) a $p > 5~\text{GeV}/c$, exactamente onde a fórmula
+de Bethe-Bloch prevê que as curvas de dE/dx das duas espécies convergem.
+O método de ML confirma quantitativamente os limites já identificados pela
+análise analítica: a separação $\pi/K$ é fisicamente inviável por dE/dx a este
+regime de momento, reforçando a necessidade de detetores RICH para PID
+completo. Estes resultados constituem uma demonstração, à escala académica
+e em dados de simulação, do mesmo princípio físico que fundamenta os sistemas
+de PID por aprendizagem automática em uso no LHCb e no ALICE.
+
+% [Conclusões das restantes secções a integrar pelos colegas]
+
+Em conjunto, os resultados obtidos reproduzem o comportamento esperado da física
+de ionização de partículas carregadas em silício, validam a consistência do
+pipeline de análise e fornecem uma base quantitativa para a compreensão da
+resposta do detetor AMBER Target — incluindo a caracterização da produção de
+partículas secundárias no alvo activo e os limites intrínsecos da identificação
+de partículas por perda de energia.
+
+O resultado mais significativo deste trabalho não reside nas métricas de
+desempenho obtidas, mas na natureza do limite que estas quantificam. A
+indistinguibilidade entre piões e kaões por deposição de energia a alto momento
+não é uma deficiência do método nem uma consequência de dados insuficientes: é
+uma consequência directa da física de ionização. A fórmula de Bethe-Bloch
+define, para cada par de espécies, um domínio de momento acima do qual as
+curvas de dE/dx convergem irremediavelmente e a informação discriminante deixa
+de existir nos dados. Nenhum aumento de estatística, nenhuma arquitectura de
+aprendizagem automática mais sofisticada e nenhum acréscimo de poder
+computacional pode recuperar informação que a física não fornece. O colapso da
+AUC de $0.99$ para $0.53$ em função do momento não constitui uma falha do
+classificador --- constitui a sua confirmação mais rigorosa: o algoritmo
+comporta-se como esperado precisamente porque o sinal físico desapareceu. Esta
+demonstração quantitativa estabelece a ligação directa entre a física
+fundamental da ionização em silício e uma decisão de engenharia de detectores:
+a presença dos detetores RICH no AMBER não é uma opção de design --- é a única
+resposta possível a um limite imposto pela natureza.
+
+%=============================================================================
+\begin{thebibliography}{9}
+
+\bibitem{amber2022}
+  AMBER Collaboration,
+  \textit{Letter of Intent for the AMBER Experiment at the CERN SPS},
+  CERN-SPSC-2019-022, 2019.
+
+\bibitem{landau1944}
+  L.~D.~Landau,
+  \textit{On the energy loss of fast particles by ionization},
+  J.\ Phys.\ USSR \textbf{8} (1944) 201.
+
+\bibitem{pdg2022}
+  Particle Data Group,
+  R.~L.~Workman et al.,
+  \textit{Review of Particle Physics},
+  Prog.\ Theor.\ Exp.\ Phys.\ \textbf{2022} (2022) 083C01.
+
+\bibitem{geant4}
+  S.~Agostinelli et al.\ (Geant4 Collaboration),
+  \textit{Geant4 — a simulation toolkit},
+  Nucl.\ Instrum.\ Meth.\ A \textbf{506} (2003) 250--303.
+
+\bibitem{leo1994}
+  W.~R.~Leo,
+  \textit{Techniques for Nuclear and Particle Physics Experiments},
+  2.ª ed., Springer-Verlag, Berlin, 1994.
+
+\bibitem{bichsel2006}
+  H.~Bichsel,
+  \textit{A method to improve tracking and particle identification in TPCs
+  and silicon detectors},
+  Nucl.\ Instrum.\ Meth.\ A \textbf{562} (2006) 154--197.
+
+\bibitem{sternheimer1982}
+  R.~M.~Sternheimer, S.~M.~Seltzer e M.~J.~Berger,
+  \textit{Density effect for the ionization loss of charged particles in
+  various substances},
+  Phys.\ Rev.\ B \textbf{26} (1982) 6067--6076.
+
+\bibitem{claude}
+  Anthropic,
+  \textit{Claude} (modelo claude-sonnet-4-6),
+  ferramenta de inteligência artificial utilizada como assistente na
+  elaboração do código de análise e na revisão do relatório, 2025.
+
+\bibitem{chatgpt}
+  OpenAI,
+  \textit{ChatGPT},
+  ferramenta de inteligência artificial utilizada como assistente na
+  elaboração do código de análise e na revisão do relatório, 2025.
+
+\bibitem{sklearn}
+  F.~Pedregosa et al.,
+  \textit{Scikit-learn: Machine Learning in Python},
+  J.\ Mach.\ Learn.\ Res.\ \textbf{12} (2011) 2825--2830.
+
+\bibitem{lhcb_pid}
+  LHCb Collaboration,
+  \textit{A comprehensive real-time analysis model at the LHCb experiment},
+  JINST \textbf{14} (2019) P04006.
+
+\bibitem{alice_pid}
+  ALICE Collaboration,
+  \textit{Particle identification in ALICE: a Bayesian approach},
+  Eur.\ Phys.\ J.\ Plus \textbf{131} (2016) 168.
+
+\end{thebibliography}
 
 \end{document}

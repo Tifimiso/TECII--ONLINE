@@ -227,14 +227,16 @@ report/*.synctex.gz
 
 
 
+# Overleaf ZIPs e pastas de build temporárias
+report_overleaf*.zip
+report_overleaf*/
+
+# Plots de teste temporários
+plots/energy/test_mg*.png
+
+# PDF do enunciado (ficheiro grande, não é código)
+TrabalhoPratico2024.pdf
+
 # Artefactos Windows (Zone.Identifier) — ficheiros de metadados criados automaticamente
 # pelo Windows quando ficheiros são descarregados da internet.
-# NAO DEVEM ser adicionados ao repositório.
-#
-# INSTRUCOES PARA O GRUPO:
-# Depois de todos os membros terem os ficheiros de dados (.root, .gdml, etc.)
-# nas suas máquinas locais, descomentar a linha abaixo (remover o #)
-# para que estes ficheiros sejam ignorados automaticamente pelo git.
-#
-# *:Zone.Identifier
-
+*:Zone.Identifier
