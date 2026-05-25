@@ -9,11 +9,11 @@ O objetivo é processar os ficheiros de saída da simulação (formato ROOT) e p
 
 ## Membros do Grupo
 
-| Nome   | Branch Git |
-|--------|------------|
-| Diana  | `Diana`    |
-| Tiago  | `Tiago`    |
-| José   | `jose_branch`   |
+| Nome   | Branch Git       |
+| ------ | ---------------- |
+| Diana  | `Diana`          |
+| Tiago  | `Tiago`          |
+| José   | `jose_branch`    |
 | Rafael | `rafinha_branch` |
 
 ## Estrutura do Repositório
@@ -33,6 +33,7 @@ O professor avalia a quantidade **e qualidade** dos commits — mensagens vagas 
 `"update"` ou `"fix"` não contam.
 
 **Formato:**
+
 ```
 <tipo>: <descrição curta e clara do que foi feito>
 
@@ -41,15 +42,16 @@ O professor avalia a quantidade **e qualidade** dos commits — mensagens vagas 
 
 **Tipos disponíveis:**
 
-| Tipo | Quando usar |
-|------|-------------|
-| `feat` | Adicionaste uma nova funcionalidade ou análise |
-| `fix` | Corrigiste um erro num script ou ficheiro |
-| `refactor` | Reorganizaste código sem mudar o comportamento |
-| `docs` | Alteraste documentação (README, comentários, relatório) |
-| `chore` | Tarefas de manutenção (gitignore, dependências, estrutura) |
+| Tipo       | Quando usar                                                |
+| ---------- | ---------------------------------------------------------- |
+| `feat`     | Adicionaste uma nova funcionalidade ou análise             |
+| `fix`      | Corrigiste um erro num script ou ficheiro                  |
+| `refactor` | Reorganizaste código sem mudar o comportamento             |
+| `docs`     | Alteraste documentação (README, comentários, relatório)    |
+| `chore`    | Tarefas de manutenção (gitignore, dependências, estrutura) |
 
 **Exemplo de um bom commit:**
+
 ```
 feat: implementar histograma de deposição de energia por detetor
 
@@ -60,6 +62,7 @@ Os plots são guardados em plots/energy/.
 ```
 
 **Exemplo de um commit fraco (a evitar):**
+
 ```
 update analysis   ❌
 fix stuff         ❌
@@ -93,6 +96,7 @@ python -c "import ROOT; print(ROOT.__version__)"
 ```
 
 A instalação recomendada é via `conda`:
+
 ```bash
 conda install -c conda-forge root
 ```
@@ -166,11 +170,11 @@ Para Overleaf: ver as instruções na raiz do repositório sobre a estrutura do 
 
 As análises seguem o guia do trabalho prático. Os scripts estão em `analysis/`:
 
-| Script | Secção | Responsável | Estado |
-|--------|--------|-------------|--------|
-| `energy_deposition.py` | 3.1 — Deposição de energia | Diana | ✅ Completo |
-| `particle_id_ml.py` | 3.6 — Identificação por ML | Diana | ✅ Completo |
-| `hit_distribution.py` | 3.2 — Distribuição de hits | (colega) | ⏳ Por implementar |
-| `hadronic_vertex.py` | 3.3 — Vértices hadrónicos | (colega) | ⏳ Por implementar |
-| `temporal_distribution.py` | 3.4 — Distribuição temporal | (colega) | ⏳ Por implementar |
-| `momentum_distribution.py` | 3.5 — Distribuição do momento | José | ⏳ Por implementar |
+| Script                     | Secção                        | Responsável | Estado             |
+| -------------------------- | ----------------------------- | ----------- | ------------------ |
+| `energy_deposition.py`     | 3.1 — Deposição de energia    | Diana       | ✅ Completo        |
+| `particle_id_ml.py`        | 3.6 — Identificação por ML    | Diana       | ✅ Completo        |
+| `hit_distribution.py`      | 3.2 — Distribuição de hits    | (colega)    | ⏳ Por implementar |
+| `hadronic_vertex.py`       | 3.3 — Vértices hadrónicos     | (colega)    | ⏳ Por implementar |
+| `temporal_distribution.py` | 3.4 — Distribuição temporal   | (colega)    | ⏳ Por implementar |
+| `momentum_distribution.py` | 3.5 — Distribuição do momento | José        | ✅ Completo        |
