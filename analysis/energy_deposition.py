@@ -1351,7 +1351,7 @@ def plot_dedx_with_bethe_bloch():
     canvas.SetGrid()
     canvas.SetLeftMargin(0.12)
 
-    legenda = ROOT.TLegend(0.14, 0.48, 0.56, 0.88)
+    legenda = ROOT.TLegend(0.55, 0.13, 0.97, 0.53)
     legenda.SetBorderSize(1)
 
     profiles  = []

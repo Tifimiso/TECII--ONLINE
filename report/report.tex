@@ -1488,6 +1488,24 @@ resposta do detetor AMBER Target — incluindo a caracterização da produção 
 partículas secundárias no alvo activo e os limites intrínsecos da identificação
 de partículas por perda de energia.
 
+O resultado mais significativo deste trabalho não reside nas métricas de
+desempenho obtidas, mas na natureza do limite que estas quantificam. A
+indistinguibilidade entre piões e kaões por deposição de energia a alto momento
+não é uma deficiência do método nem uma consequência de dados insuficientes: é
+uma consequência directa da física de ionização. A fórmula de Bethe-Bloch
+define, para cada par de espécies, um domínio de momento acima do qual as
+curvas de dE/dx convergem irremediavelmente e a informação discriminante deixa
+de existir nos dados. Nenhum aumento de estatística, nenhuma arquitectura de
+aprendizagem automática mais sofisticada e nenhum acréscimo de poder
+computacional pode recuperar informação que a física não fornece. O colapso da
+AUC de $0.99$ para $0.53$ em função do momento não constitui uma falha do
+classificador --- constitui a sua confirmação mais rigorosa: o algoritmo
+comporta-se como esperado precisamente porque o sinal físico desapareceu. Esta
+demonstração quantitativa estabelece a ligação directa entre a física
+fundamental da ionização em silício e uma decisão de engenharia de detectores:
+a presença dos detetores RICH no AMBER não é uma opção de design --- é a única
+resposta possível a um limite imposto pela natureza.
+
 %=============================================================================
 \begin{thebibliography}{9}
 
