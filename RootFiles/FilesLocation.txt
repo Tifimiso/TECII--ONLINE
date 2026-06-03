@@ -1,1 +1,0 @@
-ComputerLab12: /media/scratch/CarlosScratch/AMBER/GEANT4/detectorsWithHole-CorrectSize
