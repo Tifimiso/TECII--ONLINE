@@ -779,22 +779,93 @@ antes de combinar os dados, uma prática padrão em física experimental.
 \subsection{Vértices Hadrónicos}
 %-----------------------------------------------------------------------------
 
-% ============================================================
-% INSTRUÇÕES PARA O COLEGA RESPONSÁVEL POR ESTA SECÇÃO:
-%   - Analisar a posição longitudinal Z dos vértices hadrónicos.
-%   - Distinguir vértices primários (IsPrimary=1) de secundários (IsPrimary=0).
-%   - Incluir histograma de vertexPosZ_cm.
-%   - Comparar com a geometria do alvo AMBER (posição e extensão longitudinal).
-%   - Formato sugerido: 2 subsubsections + figuras + tabela ou texto descritivo.
-% ============================================================
+Esta secção analisa a posição longitudinal $Z$ dos vértices hadrónicos
+registados na árvore \texttt{hadronicVertex}, isto é, os pontos onde ocorrem
+interações hadrónicas ao longo do eixo do feixe. Cada vértice é classificado
+pelo campo \texttt{IsPrimary}: os \emph{vértices primários} (\texttt{IsPrimary}
+$=1$) correspondem às interações iniciais dos piões do feixe com o material do
+alvo, enquanto os \emph{vértices secundários} (\texttt{IsPrimary} $=0$) resultam
+das cascatas hadrónicas subsequentes desencadeadas pelas partículas filhas.
+A distribuição em $Z$ permite localizar a região activa do alvo e quantificar a
+multiplicidade de interações secundárias por interação primária.
+
+Os quatro runs combinados contêm $925\,222$ vértices hadrónicos, dos quais
+$39\,653$ ($4.3\%$) são primários e $885\,569$ ($95.7\%$) secundários. A
+Tabela~\ref{tab:vertex_contagem} discrimina a contagem por run, evidenciando uma
+elevada reprodutibilidade estatística entre runs: cerca de $9\,900$ vértices
+primários e $\sim 2.2 \times 10^5$ secundários em cada um. A razão
+secundários/primários é de aproximadamente $22$, refletindo a abundante
+produção de partículas em cascata no interior do alvo.
+
+\begin{table}[H]
+  \centering
+  \caption{Contagem de vértices hadrónicos primários (\texttt{IsPrimary}$=1$) e
+    secundários (\texttt{IsPrimary}$=0$) em cada run da simulação.}
+  \label{tab:vertex_contagem}
+  \begin{tabular}{lrrr}
+    \toprule
+    \textbf{Run} & \textbf{Primários} & \textbf{Secundários} & \textbf{Total} \\
+    \midrule
+    0      & $9\,940$  & $229\,872$ & $239\,812$ \\
+    1      & $9\,966$  & $217\,134$ & $227\,100$ \\
+    2      & $9\,825$  & $220\,439$ & $230\,264$ \\
+    3      & $9\,922$  & $218\,124$ & $228\,046$ \\
+    \midrule
+    \textbf{Total} & $39\,653$ & $885\,569$ & $925\,222$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \subsubsection{Vértices primários}
 
-% Inserir figura e descrição aqui.
+A Figura~\ref{fig:vertex_overlay} sobrepõe a distribuição em $Z$ de todos os
+vértices hadrónicos com as componentes primária e secundária. Os vértices
+primários concentram-se numa região estreita a montante, entre
+$Z \approx -300$~cm e $Z \approx -150$~cm, com valor médio em torno de
+$Z \approx -210$~cm. Esta localização corresponde à posição e extensão
+longitudinal do alvo activo do AMBER: é aí que os piões do feixe sofrem a sua
+primeira interação hadrónica inelástica. A estrutura em picos discretos visível
+no histograma reflete a segmentação do material do alvo ao longo do eixo do
+feixe. Fora desta região, a contagem de vértices primários é praticamente nula,
+confirmando que as interações iniciais ficam confinadas ao volume do alvo.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{plots/vertex/vertex_z_overlay.png}
+  \caption{Distribuição da posição longitudinal $Z$ dos vértices hadrónicos
+    (4 runs combinados): todos os vértices (contorno azul), primários
+    (\texttt{IsPrimary}$=1$, verde) e secundários (\texttt{IsPrimary}$=0$,
+    vermelho). Os vértices primários concentram-se na região do alvo activo
+    ($-300 \lesssim Z \lesssim -150$~cm).}
+  \label{fig:vertex_overlay}
+\end{figure}
 
 \subsubsection{Vértices secundários}
 
-% Inserir figura e descrição aqui.
+A Figura~\ref{fig:vertex_individual} apresenta as distribuições em $Z$ dos
+vértices primários e secundários em painéis separados, ambos em escala
+logarítmica para evidenciar a estrutura ao longo de várias ordens de grandeza.
+Os vértices secundários, sendo $\sim 22$ vezes mais numerosos, partilham o pico
+principal na região do alvo (onde a densidade de material maximiza a
+probabilidade de novas interações), mas estendem-se por uma gama em $Z$ muito
+mais ampla do que os primários. Esta cauda alargada, que vai desde
+$Z \approx -400$~cm até $Z \approx +500$~cm, corresponde às interações em
+cascata desencadeadas pelas partículas filhas à medida que se propagam para
+jusante através dos detetores e do material envolvente. A escala logarítmica
+revela que, fora do pico do alvo, a contagem de vértices secundários decai
+suavemente mas permanece não nula em todo o domínio, ao contrário dos primários,
+que se anulam abruptamente fora da região do alvo.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{plots/vertex/vertex_z_individual.png}
+  \caption{Posição longitudinal $Z$ dos vértices hadrónicos em escala
+    logarítmica: vértices primários (esquerda, \texttt{IsPrimary}$=1$) e
+    secundários (direita, \texttt{IsPrimary}$=0$). Os secundários partilham o
+    pico do alvo mas exibem uma cauda muito mais extensa, associada às cascatas
+    hadrónicas a jusante.}
+  \label{fig:vertex_individual}
+\end{figure}
 
 %-----------------------------------------------------------------------------
 \subsection{Distribuição Temporal}
