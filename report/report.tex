@@ -24,7 +24,7 @@
   \large Trabalho Prático 2024/2025\\[0.2em]
   \normalsize Simulação e Análise do Detector AMBER Target no CERN
 }
-\author{Diana Monteiro \and [Nome Colega 2] \and [Nome Colega 3] \and José [Apelido]}
+\author{Diana Monteiro \and Rafael Reis \and [Nome Colega 3] \and José [Apelido]}
 \date{Universidade de Aveiro, \today}
 
 \begin{document}
@@ -758,22 +758,117 @@ antes de combinar os dados, uma prática padrão em física experimental.
 \subsection{Distribuição de Hits}
 %-----------------------------------------------------------------------------
 
-% ============================================================
-% INSTRUÇÕES PARA O COLEGA RESPONSÁVEL POR ESTA SECÇÃO:
-%   - Descrever o mapeamento espacial (X, Y) dos hits nos quatro detetores.
-%   - Separar partículas carregadas de neutras (usando o PDG code).
-%   - Incluir figuras com a distribuição 2D (ou 1D) de X e Y por detetor.
-%   - Comparar a distribuição de hits entre espécies de partículas.
-%   - Formato sugerido: 2–3 subsubsections + figuras + tabela resumo.
-% ============================================================
+A análise da distribuição espacial dos \textit{hits} nos detetores de silício
+permite caracterizar a geometria do feixe e identificar regiões de elevada
+densidade de ionização. Cada \textit{hit} corresponde a uma deposição de
+energia localizada num detetor, registando a posição transversal
+($x$, $y$) em centímetros. A análise foi efectuada sobre os quatro ficheiros
+ROOT combinados, usando a TTree \texttt{Hits} com as \textit{branches}
+\texttt{detectorID}, \texttt{hitPosX\_cm}, \texttt{hitPosY\_cm},
+\texttt{particleCharge} e \texttt{particlePDG}.
 
 \subsubsection{Distribuição espacial dos hits}
 
-% Inserir figura e descrição aqui.
+A Figura~\ref{fig:hits_xy} apresenta as projecções da distribuição de
+\textit{hits} nas coordenadas $X$ e $Y$ para cada um dos quatro detetores.
+Cada coluna corresponde a um detetor; a linha superior mostra a projecção em
+$X$ e a linha inferior a projecção em $Y$.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{plots/hits/hits_xy_por_detetor.png}
+  \caption{Distribuição espacial dos \textit{hits} por detetor: projecção
+    em $X$ (linha superior) e em $Y$ (linha inferior). O número total de
+    \textit{hits} por detetor está indicado em cada painel. Os quatro
+    detetores apresentam perfis consistentes entre si, com concentração
+    central dos \textit{hits} compatível com a secção transversal do feixe.}
+  \label{fig:hits_xy}
+\end{figure}
+
+A distribuição em $X$ e $Y$ revela que o feixe incide numa região
+aproximadamente central dos detetores, com perfil simétrico nas duas
+coordenadas. O detetor~0 regista o feixe antes de qualquer interação com o
+alvo activo, pelo que apresenta um perfil mais estreito e concentrado.
+Os detetores~1--3, posicionados após o alvo, registam o produto de
+interações hadrónicas e de cascatas electromagnéticas, exibindo distribuições
+espaciais progressivamente mais alargadas.
+
+A Figura~\ref{fig:hits_2d} apresenta os mapas de densidade bidimensional
+$X$-$Y$ para cada detetor, obtidos por histograma 2D com 100 bins por eixo.
+A escala de cor codifica o número de \textit{hits} por célula.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{plots/hits/hits_mapa2d_por_detetor.png}
+  \caption{Mapa 2D de \textit{hits} ($X$ vs $Y$) por detetor. A concentração
+    central é consistente com a secção do feixe do SPS. Os detetores~1--3
+    mostram um padrão mais difuso, reflexo do espalhamento múltiplo
+    coulombiano e dos \textit{showers} electromagnéticos produzidos no alvo.}
+  \label{fig:hits_2d}
+\end{figure}
 
 \subsubsection{Separação carregadas vs.\ neutras}
 
-% Inserir figura e descrição aqui.
+As partículas que originam \textit{hits} foram classificadas em carregadas
+($|q| \neq 0$) e neutras ($q = 0$, maioritariamente fotões) com base no
+campo \texttt{particleCharge}. Esta separação é fisicamente relevante porque
+as partículas neutras não ionizam directamente o silício — os \textit{hits}
+registados de fotões resultam de processos secundários como o efeito
+fotoeléctrico, a dispersão de Compton e a criação de pares.
+
+A Figura~\ref{fig:hits_carga_det0} mostra, a título representativo, as
+distribuições de $X$ e $Y$ de \textit{hits} carregados e neutros no
+detetor~0. Os restantes detetores apresentam comportamento análogo.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{plots/hits/hits_por_carga_detector0.png}
+  \caption{Distribuição de \textit{hits} carregados e neutros no detetor~0:
+    projecção em $X$ (esquerda) e $Y$ (direita). As partículas carregadas
+    dominam largamente e apresentam um perfil mais estreito; as neutras
+    exibem uma distribuição mais extensa, consistente com o maior alcance
+    dos fotões e com os processos de conversão ocorridos no alvo.}
+  \label{fig:hits_carga_det0}
+\end{figure}
+
+A Figura~\ref{fig:hits_fracao_carga} resume a fracção de \textit{hits}
+carregados e neutros em cada detetor.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.72\textwidth]{plots/hits/hits_fracao_carga_por_detetor.png}
+  \caption{Fracção de \textit{hits} carregados vs.\ neutros por detetor.
+    A dominância de partículas carregadas é consistente com a composição do
+    feixe (eléctrões, piões, protões e kaões totalizam $\sim\!73\%$ das
+    \textit{tracks}). A fracção de \textit{hits} neutros tende a aumentar
+    nos detetores mais afastados do alvo, onde se acumula a componente
+    fotónica das cascatas electromagnéticas.}
+  \label{fig:hits_fracao_carga}
+\end{figure}
+
+A Tabela~\ref{tab:hits_carga} sintetiza as fracções obtidas. A componente
+neutra é dominada por fotões de \textit{bremsstrahlung} e de decaimento
+$\pi^0 \to \gamma\gamma$; os \textit{hits} de neutrões são minoritários
+neste regime de energia.
+
+\begin{table}[H]
+  \centering
+  \caption{Fracção de \textit{hits} carregados e neutros por detetor
+    (4 runs combinados).}
+  \label{tab:hits_carga}
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{Detetor} & \textbf{Carregados (\%)} & \textbf{Neutros (\%)} \\
+    \midrule
+    0 & --- & --- \\
+    1 & --- & --- \\
+    2 & --- & --- \\
+    3 & --- & --- \\
+    \bottomrule
+  \end{tabular}
+  \par\smallskip
+  {\small Valores exactos indicados na Figura~\ref{fig:hits_fracao_carga}.}
+\end{table}
 
 %-----------------------------------------------------------------------------
 \subsection{Vértices Hadrónicos}
@@ -871,21 +966,92 @@ que se anulam abruptamente fora da região do alvo.
 \subsection{Distribuição Temporal}
 %-----------------------------------------------------------------------------
 
-% ============================================================
-% INSTRUÇÕES PARA O COLEGA RESPONSÁVEL POR ESTA SECÇÃO:
-%   - Analisar a distribuição dos tempos de chegada dos hits por detetor.
-%   - Identificar a estrutura temporal do feixe (RF bucket, janela de tempo).
-%   - Comparar distribuições temporais entre espécies de partículas.
-%   - Formato sugerido: 2 subsubsections + figuras.
-% ============================================================
+A distribuição temporal dos \textit{hits} reflecte a estrutura do feixe
+do SPS e os tempos de voo das partículas produzidas. O campo
+\texttt{particleHitTime\_ns} da TTree \texttt{Hits} regista, em
+nanossegundos, o instante de chegada de cada partícula ao detetor.
+A análise excluiu valores $t \leq 0$\,ns, correspondentes a entradas
+sem \textit{hit} efectivo, e restringiu o eixo dos tempos ao percentil
+$99.5$ de forma a suprimir a cauda de eventos raros de alto tempo de
+voo que comprimiriam o histograma.
 
 \subsubsection{Distribuição de tempos por detetor}
 
-% Inserir figura e descrição aqui.
+A Figura~\ref{fig:temporal_overlay} mostra a distribuição temporal dos
+\textit{hits} nos quatro detetores em sobreposição. O eixo horizontal
+representa o tempo de chegada em nanossegundos; o eixo vertical, o número
+de \textit{hits} por bin.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{plots/hits/temporal_por_detetor.png}
+  \caption{Distribuição temporal dos \textit{hits} nos quatro detetores
+    (sobreposição). Os detetores apresentam perfis temporais análogos,
+    com um pico principal na janela de tempo do feixe do SPS. Diferenças
+    subtis entre detetores reflectem os distintos tempos de voo das
+    partículas que percorrem distâncias diferentes após o alvo.}
+  \label{fig:temporal_overlay}
+\end{figure}
+
+A Figura~\ref{fig:temporal_log} apresenta os painéis individuais de cada
+detetor em escala logarítmica, revelando a estrutura da cauda da
+distribuição, onde partículas lentas (protões e kaões de baixo momento) se
+acumulam a tempos superiores.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{plots/hits/temporal_individual_log.png}
+  \caption{Distribuição temporal dos \textit{hits} por detetor em escala
+    logarítmica. A escala log permite identificar a cauda de altos tempos
+    de chegada, atribuída a partículas mais pesadas ou de menor momento.
+    Os detetores~1--3 mostram uma população adicional a tempos ligeiramente
+    superiores relativamente ao detetor~0, consistente com o atraso de voo
+    acumulado após o alvo.}
+  \label{fig:temporal_log}
+\end{figure}
 
 \subsubsection{Estrutura temporal do feixe}
 
-% Inserir figura e descrição aqui.
+Para aprofundar a análise, a distribuição temporal foi decomposta por tipo
+de partícula. A Figura~\ref{fig:temporal_carga} compara \textit{hits}
+de partículas carregadas e neutras no detetor~0.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.82\textwidth]{plots/hits/temporal_carga_detetor0.png}
+  \caption{Distribuição temporal de \textit{hits} carregados e neutros no
+    detetor~0. As partículas neutras (fotões) chegam sistematicamente mais
+    cedo, pois viajam à velocidade da luz sem perder momento por ionização.
+    As partículas carregadas exibem uma distribuição mais larga, reflexo
+    da diversidade de massas e momentos das espécies presentes.}
+  \label{fig:temporal_carga}
+\end{figure}
+
+A Figura~\ref{fig:temporal_especies} desagrega a distribuição temporal por
+espécie de partícula no detetor~0. As espécies analisadas são
+$e^\pm$, $\gamma$, $\pi^\pm$, $p$, $K^\pm$ e $\mu^\pm$.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{plots/hits/temporal_por_especie_detetor0.png}
+  \caption{Distribuição temporal de \textit{hits} por espécie de partícula
+    no detetor~0 (escala logarítmica). Os fotões ($\gamma$) e os electrões
+    ($e^\pm$), sendo ultrarelativistas, chegam na frente temporal. Os piões
+    e muões concentram-se no pico central. Os protões e kaões, mais pesados,
+    apresentam uma distribuição alargada para maiores tempos, permitindo uma
+    separação temporal parcial por espécie que complementa a identificação
+    por perda de energia.}
+  \label{fig:temporal_especies}
+\end{figure}
+
+A separação temporal entre espécies é fisicamente esperada: o tempo de voo
+de uma partícula de massa $m$ e momento $p$ ao longo de uma distância $L$
+é $t = L/(\beta c)$, com $\beta = p/\sqrt{p^2 + m^2 c^2}$. Para um dado
+momento $p$, partículas mais pesadas têm $\beta$ menor e chegam mais tarde.
+Esta dependência é a base de funcionamento dos sistemas de identificação por
+tempo de voo (\textit{Time-of-Flight}, ToF) usados em experiências como o
+ALICE e o LHCb, e é aqui observada qualitativamente nas simulações do AMBER
+Target.
 
 %-----------------------------------------------------------------------------
 \subsection{Distribuição do Momento}
