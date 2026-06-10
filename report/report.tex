@@ -24,7 +24,7 @@
   \large Trabalho Prático 2024/2025\\[0.2em]
   \normalsize Simulação e Análise do Detector AMBER Target no CERN
 }
-\author{Diana Monteiro \and Rafael Reis \and [Nome Colega 3] \and José [Apelido]}
+\author{Diana Monteiro \and Rafael Reis \and Tiago Soure \and José Oliveira}
 \date{Universidade de Aveiro, \today}
 
 \begin{document}
@@ -1716,7 +1716,37 @@ completo. Estes resultados constituem uma demonstração, à escala académica
 e em dados de simulação, do mesmo princípio físico que fundamenta os sistemas
 de PID por aprendizagem automática em uso no LHCb e no ALICE.
 
-% [Conclusões das restantes secções a integrar pelos colegas]
+\textbf{Vértices hadrónicos.}
+A análise dos vértices hadrónicos revelou um total de $925\,222$ vértices
+nos quatro runs combinados, dos quais $39\,653$ ($4{,}3\%$) são primários e
+$885\,569$ ($95{,}7\%$) secundários, com uma razão secundários/primários de
+aproximadamente $22\!:\!1$. Os vértices primários concentram-se na região do
+alvo activo ($Z \approx -300$ a $-150$~cm), correspondendo à primeira interação
+hadrónica inelástica dos piões do feixe com o material do alvo. Os vértices
+secundários estendem-se até $Z \approx +500$~cm, reflectindo as cascatas
+hadrónicas desencadeadas pelas partículas filhas a jusante do alvo. A contagem
+por run mostrou elevada reprodutibilidade (${\sim}\,9\,900$ primários por run),
+validando a consistência estatística da simulação.
+
+\textbf{Distribuição espacial dos hits.}
+A distribuição dos hits em $X$ e $Y$ mostrou um perfil central e simétrico em
+todos os detetores, consistente com a secção transversal do feixe do SPS. O
+detetor~0, posicionado a montante do alvo, apresenta o perfil mais estreito e
+concentrado; os detetores~1--3, a jusante, exibem distribuições progressivamente
+mais alargadas, resultado do espalhamento múltiplo coulombiano e das cascatas
+electromagnéticas produzidas no alvo. A componente carregada domina os hits em
+todos os detetores; a fracção neutra (maioritariamente fotões de
+\textit{bremsstrahlung} e decaimento $\pi^0 \to \gamma\gamma$) aumenta nos
+detetores mais afastados, onde se acumula a componente fotónica das cascatas.
+
+\textbf{Distribuição temporal dos hits.}
+A distribuição temporal dos hits revelou uma separação por espécie consistente
+com o tempo de voo esperado pela relação $t = L/(\beta c)$: fotões e electrões
+($\beta \approx 1$) chegam na frente temporal, seguidos de piões e muões, com
+protões e kaões a apresentar a cauda mais alargada para tempos superiores. Este
+comportamento está na base dos sistemas de identificação por tempo de voo
+(\textit{Time-of-Flight}, ToF) utilizados em experiências como o ALICE e o LHCb,
+sendo aqui observado qualitativamente nos dados simulados do AMBER Target.
 
 Em conjunto, os resultados obtidos reproduzem o comportamento esperado da física
 de ionização de partículas carregadas em silício, validam a consistência do
